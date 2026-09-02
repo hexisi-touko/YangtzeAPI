@@ -3,21 +3,27 @@ const path = require('node:path')
 const { loadDesktopConfig, logoPathForLoginPage } = require('./src/config')
 const { NewApiClient, NewApiClientError } = require('./src/new-api-client')
 const { PasswordResetStore } = require('./src/password-reset-store')
+const { CredentialStore } = require('./src/credential-store')
 
 const desktopConfig = loadDesktopConfig()
 const LOGIN_WINDOW_WIDTH = 420
 const LOGIN_WINDOW_HEIGHT = 620
-const USER_SESSION_PARTITION = 'persist:new-api-user'
+const USER_SESSION_PARTITION = desktopConfig.sessionPartition
 
 let loginWindow = null
 let userWindow = null
 let apiSession = null
 let apiClient = null
 let passwordResetStore = null
+let credentialStore = null
 let pendingTwoFactor = null
+let pendingRegistration = null
 
 app.enableSandbox()
-app.setAppUserModelId('com.apirelay.desktop')
+if (desktopConfig.userDataDirectoryName) {
+  app.setPath('userData', path.join(app.getPath('appData'), desktopConfig.userDataDirectoryName))
+}
+app.setAppUserModelId(desktopConfig.appId)
 
 function isLoginPage(event) {
   try {
@@ -37,6 +43,29 @@ function publicError(error, fallback) {
     return { success: false, message: error.message, code: error.code }
   }
   return { success: false, message: fallback, code: 'CLIENT_ERROR' }
+}
+
+function updateSavedCredentials(credentials) {
+  try {
+    if (credentials?.rememberCredentials === true) {
+      credentialStore.save({ username: credentials.username, password: credentials.password })
+    } else {
+      credentialStore.clear()
+    }
+  } catch {
+    // 凭据存储失败不能阻止已通过验证的用户进入客户端。
+  }
+}
+
+async function requireMemberAccount(result) {
+  if (result.accountRole === 1) return
+  await apiSession.clearStorageData({
+    origin: desktopConfig.serverUrl,
+    storages: ['cookies', 'localstorage'],
+  })
+  throw new NewApiClientError('管理员账号请使用 Web 管理后台登录', {
+    code: 'DESKTOP_MEMBER_ONLY',
+  })
 }
 
 function isServerUrl(candidate) {
@@ -198,15 +227,37 @@ function registerIpcHandlers() {
     }
   })
 
+  ipcMain.handle('auth:get-saved-credentials', (event) => {
+    requireLoginPage(event)
+    const credentials = credentialStore.load()
+    return { success: true, credentials }
+  })
+
+  ipcMain.handle('auth:clear-saved-credentials', (event) => {
+    requireLoginPage(event)
+    credentialStore.clear()
+    return { success: true }
+  })
+
   ipcMain.handle('auth:login', async (event, credentials) => {
     requireLoginPage(event)
     pendingTwoFactor = null
     try {
       const result = await apiClient.login(credentials || {})
       if (result.requiresTwoFactor) {
-        pendingTwoFactor = { flowToken: result.flowToken, expiresAt: result.expiresAt }
+        pendingTwoFactor = {
+          flowToken: result.flowToken,
+          expiresAt: result.expiresAt,
+          credentials: {
+            username: credentials?.username,
+            password: credentials?.password,
+            rememberCredentials: credentials?.rememberCredentials === true,
+          },
+        }
         return { success: true, requiresTwoFactor: true, message: result.message }
       }
+      await requireMemberAccount(result)
+      updateSavedCredentials(credentials)
       await openUserWindow()
       return { success: true, authenticated: true, message: result.message }
     } catch (error) {
@@ -223,7 +274,10 @@ function registerIpcHandlers() {
     }
     try {
       const result = await apiClient.verifyTwoFactor({ code, flowToken: pendingTwoFactor.flowToken })
+      const credentials = pendingTwoFactor.credentials
       pendingTwoFactor = null
+      await requireMemberAccount(result)
+      updateSavedCredentials(credentials)
       await openUserWindow()
       return { success: true, authenticated: true, message: result.message }
     } catch (error) {
@@ -234,9 +288,27 @@ function registerIpcHandlers() {
   ipcMain.handle('auth:submit-registration-application', async (event, application) => {
     requireLoginPage(event)
     try {
-      return await apiClient.submitRegistrationApplication(application || {})
+      const registration = application || {}
+      const result = await apiClient.submitRegistrationApplication(registration)
+      pendingRegistration = {
+        username: String(registration.username || '').trim(),
+        password: String(registration.password || ''),
+      }
+      return result
     } catch (error) {
       return publicError(error, '提交申请失败')
+    }
+  })
+
+  ipcMain.handle('auth:registration-application-status', async (event) => {
+    requireLoginPage(event)
+    if (!pendingRegistration) {
+      return { success: false, message: '本次启动中没有可查询的注册申请' }
+    }
+    try {
+      return await apiClient.getRegistrationApplicationStatus(pendingRegistration)
+    } catch (error) {
+      return publicError(error, '查询注册申请状态失败')
     }
   })
 
@@ -300,6 +372,7 @@ function registerIpcHandlers() {
         newPassword,
       })
       passwordResetStore.clear()
+      credentialStore.clear()
       return result
     } catch (error) {
       return publicError(error, '重置密码失败')
@@ -315,6 +388,10 @@ app.whenReady().then(async () => {
   apiClient = new NewApiClient({ config: desktopConfig, session: apiSession })
   passwordResetStore = new PasswordResetStore({
     filePath: path.join(app.getPath('userData'), 'password-reset-request.bin'),
+    safeStorage,
+  })
+  credentialStore = new CredentialStore({
+    filePath: path.join(app.getPath('userData'), 'login-credentials.bin'),
     safeStorage,
   })
   registerIpcHandlers()

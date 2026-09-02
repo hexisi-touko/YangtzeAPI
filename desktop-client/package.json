@@ -7,12 +7,15 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check electron-builder.config.js && node --check src/config.js && node --check src/new-api-client.js && node --check src/password-reset-store.js && node --check scripts/generate-icon.js && node --check ui/login.js",
+    "start:local-test": "electron main.local-test.js",
+    "check": "node --check main.js && node --check main.local-test.js && node --check preload.js && node --check electron-builder.config.js && node --check electron-builder.local-test.config.js && node --check src/config.js && node --check src/credential-store.js && node --check src/new-api-client.js && node --check src/password-reset-store.js && node --check scripts/generate-icon.js && node --check scripts/generate-local-test-icon.js && node --check scripts/visual-check.js && node --check ui/login.js",
     "test": "node --test test/*.test.js",
     "visual:check": "electron scripts/visual-check.js",
     "icon:generate": "electron scripts/generate-icon.js",
+    "icon:generate:local-test": "electron scripts/generate-local-test-icon.js",
     "predist:win": "npm run icon:generate",
     "dist:win": "electron-builder --config electron-builder.config.js --win",
+    "dist:local-test": "npm run icon:generate:local-test && electron-builder --config electron-builder.local-test.config.js --win",
     "release:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-local.ps1"
   },
   "devDependencies": {

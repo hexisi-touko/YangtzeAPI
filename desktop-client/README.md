@@ -9,12 +9,15 @@
 - `GET /api/status`：兼容 New API
 - `POST /api/user/login`：兼容 New API
 - `POST /api/user/login/2fa`：兼容 New API
-- `POST /api/user/registration-applications`：为管理员审核注册而预留的自定义接口，需由后续修改版 New API 实现
-- `POST /api/user/password-reset-applications`：为管理员审核找回密码而预留的自定义接口，需由后续修改版 New API 实现
+- `POST /api/user/registration-applications`：由配套 `master` 分支实现注册申请
+- `POST /api/user/application/status`：查询注册申请的实时审核状态
+- `POST /api/user/password-reset-applications`：由配套 `master` 分支实现找回密码申请
 - `POST /api/user/password-reset-applications/status`：查询本机已提交申请的审核状态
 - `POST /api/user/password-reset-applications/complete`：审核通过后提交新密码
 
 找回密码不使用邮箱：用户先提交用户名和申请理由，管理员在 Web 端批准后，EXE 才显示“重置密码”和“再次确认重置密码”。客户端不直接连接数据库，也不包含申请表。服务端接口契约见 [SERVER-CONTRACT.md](./SERVER-CONTRACT.md)。
+
+忘记密码只修改登录密码，不会重新生成或替换注册审核时分发的 API Key。
 
 ## 目录结构
 
@@ -37,6 +40,21 @@ desktop-client/
 
 ## 本地开始
 
+先从本仓库 `master` 分支启动配套 New API：
+
+```powershell
+docker compose -f compose.local.yaml up -d --build
+```
+
+再在本目录启动已预配置为 `http://127.0.0.1:3000` 的 LocalTest 客户端：
+
+```powershell
+npm ci
+npm run start:local-test
+```
+
+通用配置方式：
+
 ```powershell
 npm ci
 Copy-Item desktop.config.example.json desktop.config.json
@@ -52,6 +70,12 @@ npm start
 
 ```powershell
 npm run dist:win
+```
+
+构建与本地 New API 直接连接的测试版：
+
+```powershell
+npm run dist:local-test
 ```
 
 输出位于 `dist/`：

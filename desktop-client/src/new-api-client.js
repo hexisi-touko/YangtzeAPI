@@ -21,11 +21,34 @@ function requireValue(value, name, maxLength) {
   return normalized
 }
 
+function requireReason(value) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new NewApiClientError('申请理由不能为空', { code: 'INVALID_INPUT' })
+  }
+  return value.trim()
+}
+
 function responseMessage(payload, fallback) {
   if (typeof payload?.message === 'string' && payload.message.trim()) {
     return payload.message.trim().slice(0, 300)
   }
   return fallback
+}
+
+function applicationStatus(value) {
+  const status = requireValue(String(value || ''), '审核状态', 32).toLowerCase()
+  if (!['pending', 'approved', 'rejected'].includes(status)) {
+    throw new NewApiClientError('服务器返回了未知的审核状态', { code: 'INVALID_RESPONSE' })
+  }
+  return status
+}
+
+function authenticatedAccountRole(payload) {
+  const role = Number(payload?.data?.user?.role)
+  if (!Number.isInteger(role)) {
+    throw new NewApiClientError('服务器登录响应缺少账号角色', { code: 'INVALID_RESPONSE' })
+  }
+  return role
 }
 
 class NewApiClient {
@@ -135,18 +158,27 @@ class NewApiClient {
         message: responseMessage(payload, '请输入两步验证码'),
       }
     }
-    return { authenticated: true, requiresTwoFactor: false, message: '登录成功' }
+    return {
+      authenticated: true,
+      requiresTwoFactor: false,
+      accountRole: authenticatedAccountRole(payload),
+      message: '登录成功',
+    }
   }
 
   async verifyTwoFactor({ code, flowToken }) {
-    await this.request(this.config.apiPaths.login2fa, {
+    const payload = await this.request(this.config.apiPaths.login2fa, {
       method: 'POST',
       body: {
         code: requireValue(code, '验证码', 16),
         flow_token: requireValue(flowToken, '两步验证流程令牌', 2048),
       },
     })
-    return { authenticated: true, message: '验证成功' }
+    return {
+      authenticated: true,
+      accountRole: authenticatedAccountRole(payload),
+      message: '验证成功',
+    }
   }
 
   async submitRegistrationApplication({ username, password, reason }) {
@@ -155,13 +187,33 @@ class NewApiClient {
       body: {
         username: requireValue(username, '用户名', 64),
         password: requireValue(password, '密码', 256),
-        reason: requireValue(reason, '申请理由', 300),
+        reason: requireReason(reason),
       },
     })
     return {
       success: true,
       message: responseMessage(payload, '申请已提交，请等待管理员审核'),
       applicationId: payload?.data?.application_id ?? payload?.data?.id ?? null,
+      status: applicationStatus(payload?.data?.application_status || 'pending'),
+    }
+  }
+
+  async getRegistrationApplicationStatus({ username, password }) {
+    const payload = await this.request(this.config.apiPaths.registrationApplicationStatus, {
+      method: 'POST',
+      body: {
+        username: requireValue(username, '用户名', 64),
+        password: requireValue(password, '密码', 256),
+      },
+    })
+    return {
+      success: true,
+      applicationId: payload?.data?.application_id ?? null,
+      status: applicationStatus(payload?.data?.application_status),
+      reviewComment: typeof payload?.data?.review_comment === 'string'
+        ? payload.data.review_comment.trim().slice(0, 300)
+        : '',
+      reviewedAt: Number(payload?.data?.reviewed_at) || 0,
     }
   }
 
@@ -170,7 +222,7 @@ class NewApiClient {
       method: 'POST',
       body: {
         username: requireValue(username, '用户名', 64),
-        reason: requireValue(reason, '申请理由', 300),
+        reason: requireReason(reason),
       },
     })
     return {

@@ -36,15 +36,39 @@ function clientWith(handler) {
 }
 
 test('login sends only username and password to the fixed login endpoint', async () => {
-  const { client, requests } = clientWith(() => response({ success: true, data: { access_token: 'secret' } }))
+  const { client, requests } = clientWith(() => response({
+    success: true,
+    data: { access_token: 'secret', user: { role: 1 } },
+  }))
   const result = await client.login({ username: 'alice', password: 'correct horse' })
   assert.equal(result.authenticated, true)
+  assert.equal(result.accountRole, 1)
   assert.equal(requests[0].url, 'https://api.example.com/api/user/login')
   assert.deepEqual(JSON.parse(requests[0].options.body), {
     username: 'alice',
     password: 'correct horse',
   })
   assert.equal(requests[0].options.credentials, 'include')
+})
+
+test('login returns the account role so the desktop shell can reject administrators', async () => {
+  const { client } = clientWith(() => response({
+    success: true,
+    data: { access_token: 'secret', user: { role: 100 } },
+  }))
+  const result = await client.login({ username: 'admin', password: 'password' })
+  assert.equal(result.accountRole, 100)
+})
+
+test('login rejects authenticated responses without a role', async () => {
+  const { client } = clientWith(() => response({
+    success: true,
+    data: { access_token: 'secret', user: {} },
+  }))
+  await assert.rejects(
+    () => client.login({ username: 'alice', password: 'password' }),
+    (error) => error instanceof NewApiClientError && error.code === 'INVALID_RESPONSE',
+  )
 })
 
 test('login returns the temporary 2FA flow without exposing an authenticated result', async () => {
@@ -76,6 +100,49 @@ test('registration application uses the future review endpoint and exact fields'
     reason: '课程科研项目使用',
   })
   assert.equal(result.applicationId, 42)
+  assert.equal(result.status, 'pending')
+})
+
+test('registration application accepts a reason longer than the former limit', async () => {
+  const longReason = '长'.repeat(1200)
+  const { client, requests } = clientWith(() => response({
+    success: true,
+    data: { application_id: 43, application_status: 'pending' },
+  }))
+  await client.submitRegistrationApplication({
+    username: 'long-reason-user',
+    password: 'password123',
+    reason: longReason,
+  })
+  assert.equal(JSON.parse(requests[0].options.body).reason, longReason)
+})
+
+test('registration application status refresh returns the latest review decision', async () => {
+  const { client, requests } = clientWith(() => response({
+    success: true,
+    data: {
+      application_id: 42,
+      application_status: 'approved',
+      review_comment: '已核实项目用途',
+      reviewed_at: 1788336000,
+    },
+  }))
+  const result = await client.getRegistrationApplicationStatus({
+    username: 'new-user',
+    password: 'password123',
+  })
+  assert.equal(requests[0].url, 'https://api.example.com/api/user/application/status')
+  assert.deepEqual(JSON.parse(requests[0].options.body), {
+    username: 'new-user',
+    password: 'password123',
+  })
+  assert.deepEqual(result, {
+    success: true,
+    applicationId: 42,
+    status: 'approved',
+    reviewComment: '已核实项目用途',
+    reviewedAt: 1788336000,
+  })
 })
 
 test('password reset application sends username and reason without email', async () => {
@@ -94,6 +161,16 @@ test('password reset application sends username and reason without email', async
   })
   assert.equal(result.applicationId, '51')
   assert.equal(result.applicationSecret, 'one-time-secret')
+})
+
+test('password reset application accepts a reason longer than the former limit', async () => {
+  const longReason = '长'.repeat(1200)
+  const { client, requests } = clientWith(() => response({
+    success: true,
+    data: { application_id: 52, application_secret: 'one-time-secret' },
+  }))
+  await client.submitPasswordResetApplication({ username: 'locked-user', reason: longReason })
+  assert.equal(JSON.parse(requests[0].options.body).reason, longReason)
 })
 
 test('password reset status uses the stored application capability', async () => {

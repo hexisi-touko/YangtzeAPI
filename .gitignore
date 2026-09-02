@@ -2,8 +2,10 @@
 *.env.local
 node_modules/
 dist/
+desktop-client/dist-local-test*/
 artifacts/
 desktop.config.json
+desktop-client/build/icon-local-test.ico
 *.log
 .idea/
 .vscode/

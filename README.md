@@ -1,6 +1,11 @@
 # YangtzeAPI 桌面客户端
 
-当前 `main` 分支只保存 Windows EXE 客户端相关源码、配置模板、构建脚本、测试和 New API 对接契约。
+本仓库按分支分别保存配套源码：
+
+- `main`：最新版 Windows EXE 客户端源码。
+- `master`：与客户端接口配套的完整修改版 New API 后端和 Web 管理端源码。
+
+数据库、日志、`.env`、依赖和构建产物不会提交到任一分支。
 
 ## 客户端源码
 
@@ -13,15 +18,31 @@
 - Windows 安装版与便携版构建脚本
 - 单元测试、固定窗口截图检查和 GitHub Actions
 
-## 后续对接
+## 与本地 New API 直接连接
 
-修改版 New API 源码上传后，服务端实现人员可以直接参考：
+将两个分支分别下载到不同目录。先在 `master` 源码目录启动修改版 New API：
+
+```powershell
+docker compose -f compose.local.yaml up -d --build
+```
+
+服务端会监听 `http://127.0.0.1:3000`，数据保存在该源码目录的 `data` 中。然后进入 `main` 分支的客户端目录：
+
+```powershell
+cd desktop-client
+npm ci
+npm run start:local-test
+```
+
+`desktop.config.local-test.json` 已配置为连接上述本地服务，无需再改接口地址。正式服务器部署时，应基于 `desktop.config.example.json` 创建 `desktop.config.json`，改为实际 HTTPS 地址后重新构建。
+
+服务端对接资料：
 
 - [`desktop-client/SERVER-CONTRACT.md`](./desktop-client/SERVER-CONTRACT.md)：请求、响应和安全约束
 - [`desktop-client/INTEGRATION.md`](./desktop-client/INTEGRATION.md)：服务端实现项目与联调顺序
 - [`desktop-client/CONFIGURATION.md`](./desktop-client/CONFIGURATION.md)：客户端 JSON 配置
 
-当前仓库不会提交真实服务器配置、密码、令牌、数据库数据、`node_modules`、构建缓存、截图或包含真实服务器地址的 EXE。
+仓库不会提交真实服务器配置、密码、令牌、数据库数据、`node_modules`、构建缓存、截图或安装包。
 
 ## 客户端验证
 

@@ -10,6 +10,14 @@ const authAdapter = {
     if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
     return window.desktopAuth.getStatus()
   },
+  async getSavedCredentials() {
+    if (!window.desktopAuth) return { success: true, credentials: null }
+    return window.desktopAuth.getSavedCredentials()
+  },
+  async clearSavedCredentials() {
+    if (!window.desktopAuth) return { success: true }
+    return window.desktopAuth.clearSavedCredentials()
+  },
   async login(payload) {
     if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
     return window.desktopAuth.login(payload)
@@ -21,6 +29,10 @@ const authAdapter = {
   async register(payload) {
     if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
     return window.desktopAuth.submitRegistrationApplication(payload)
+  },
+  async getRegistrationApplicationStatus() {
+    if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
+    return window.desktopAuth.getRegistrationApplicationStatus()
   },
   async submitPasswordResetApplication(payload) {
     if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
@@ -51,6 +63,14 @@ const forgotApplicationStage = document.querySelector('#forgot-application-stage
 const forgotStatusStage = document.querySelector('#forgot-status-stage')
 const forgotResetStage = document.querySelector('#forgot-reset-stage')
 const forgotStatusUsername = document.querySelector('#forgot-status-username')
+const applicationStatusDialog = document.querySelector('#application-status-dialog')
+const applicationStatusMessage = document.querySelector('#application-status-message')
+const applicationStatusLabel = document.querySelector('#application-status-label')
+const applicationStatusReview = document.querySelector('#application-status-review')
+const applicationStatusReviewComment = document.querySelector('#application-status-review-comment')
+const applicationStatusUpdatedAt = document.querySelector('#application-status-updated-at')
+const applicationStatusError = document.querySelector('#application-status-error')
+const applicationStatusRefresh = document.querySelector('#application-status-refresh')
 const logoCandidates = Array.from(new Set([configuredLogoPath, 'assets/logo.svg', 'assets/logo.png']))
 let logoCandidateIndex = 0
 
@@ -82,7 +102,79 @@ function showMessage(text, type = 'info') {
   message.className = text ? `form-message visible ${type}` : 'form-message'
 }
 
+function updateApplicationStatus(result = {}) {
+  const status = ['pending', 'approved', 'rejected'].includes(result.status) ? result.status : 'pending'
+  const content = {
+    pending: {
+      label: '待审核',
+      message: result.message || '申请已提交，正在等待管理员审核。',
+    },
+    approved: {
+      label: '审核已通过',
+      message: result.message || '账号已启用，现在可以返回登录。',
+    },
+    rejected: {
+      label: '审核未通过',
+      message: result.message || '注册申请未通过管理员审核。',
+    },
+  }[status]
+  applicationStatusDialog.dataset.status = status
+  applicationStatusLabel.textContent = content.label
+  applicationStatusMessage.textContent = content.message
+  const reviewComment = String(result.reviewComment || '').trim()
+  applicationStatusReview.hidden = status === 'pending'
+  applicationStatusReviewComment.textContent = reviewComment || '管理员未填写审核意见'
+  applicationStatusUpdatedAt.textContent = new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date())
+}
+
+function showApplicationStatus(result) {
+  showMessage('')
+  applicationStatusError.hidden = true
+  updateApplicationStatus(result)
+  if (!applicationStatusDialog.open) applicationStatusDialog.showModal()
+  applicationStatusRefresh.focus()
+}
+
+async function refreshApplicationStatus() {
+  applicationStatusRefresh.disabled = true
+  applicationStatusRefresh.classList.add('is-refreshing')
+  applicationStatusError.hidden = true
+  try {
+    const result = await authAdapter.getRegistrationApplicationStatus()
+    if (!result.success) {
+      applicationStatusError.textContent = result.message || '刷新申请状态失败'
+      applicationStatusError.hidden = false
+      return
+    }
+    updateApplicationStatus(result)
+  } catch (error) {
+    applicationStatusError.textContent = error?.message || '刷新申请状态失败'
+    applicationStatusError.hidden = false
+  } finally {
+    applicationStatusRefresh.disabled = false
+    applicationStatusRefresh.classList.remove('is-refreshing')
+    applicationStatusRefresh.focus()
+  }
+}
+
+function hideAllPasswords() {
+  document.querySelectorAll('[data-password-target]').forEach((button) => {
+    const input = document.getElementById(button.dataset.passwordTarget)
+    if (!input) return
+    input.type = 'password'
+    button.classList.remove('is-visible')
+    button.setAttribute('aria-label', '显示密码')
+    button.setAttribute('aria-pressed', 'false')
+  })
+}
+
 function showView(id) {
+  hideAllPasswords()
   views.forEach((view) => view.classList.toggle('active', view.id === id))
   document.body.classList.toggle('register-view-active', id === 'register-view')
   showMessage('')
@@ -114,13 +206,46 @@ function setBusy(form, busy) {
 
 document.querySelector('#minimize-button').addEventListener('click', () => window.desktopWindow.minimize())
 document.querySelector('#close-button').addEventListener('click', () => window.desktopWindow.close())
+document.querySelector('#application-status-confirm').addEventListener('click', () => {
+  applicationStatusDialog.close()
+  showView('login-view')
+})
+applicationStatusRefresh.addEventListener('click', () => { void refreshApplicationStatus() })
 
 document.querySelectorAll('[data-view]').forEach((button) => {
   button.addEventListener('click', () => showView(button.dataset.view))
 })
 
-const rememberedUsername = localStorage.getItem('rememberedUsername') || ''
-document.querySelector('#login-username').value = rememberedUsername
+document.querySelectorAll('[data-password-target]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const input = document.getElementById(button.dataset.passwordTarget)
+    if (!input) return
+    const shouldShow = input.type === 'password'
+    input.type = shouldShow ? 'text' : 'password'
+    button.classList.toggle('is-visible', shouldShow)
+    button.setAttribute('aria-label', shouldShow ? '隐藏密码' : '显示密码')
+    button.setAttribute('aria-pressed', String(shouldShow))
+    input.focus()
+  })
+})
+
+const rememberCredentials = document.querySelector('#remember-credentials')
+
+async function loadSavedCredentials() {
+  try {
+    const result = await authAdapter.getSavedCredentials()
+    if (!result.success || !result.credentials) return
+    document.querySelector('#login-username').value = result.credentials.username || ''
+    document.querySelector('#login-password').value = result.credentials.password || ''
+    rememberCredentials.checked = true
+  } catch {
+    // 安全存储不可用时保留空表单，用户仍可正常手动登录。
+  }
+}
+
+rememberCredentials.addEventListener('change', () => {
+  if (!rememberCredentials.checked) void authAdapter.clearSavedCredentials()
+})
 
 document.querySelector('#login-form').addEventListener('submit', async (event) => {
   event.preventDefault()
@@ -129,9 +254,11 @@ document.querySelector('#login-form').addEventListener('submit', async (event) =
   const password = document.querySelector('#login-password').value
   setBusy(form, true)
   try {
-    if (document.querySelector('#remember-username').checked) localStorage.setItem('rememberedUsername', username)
-    else localStorage.removeItem('rememberedUsername')
-    const result = await authAdapter.login({ username, password })
+    const result = await authAdapter.login({
+      username,
+      password,
+      rememberCredentials: rememberCredentials.checked,
+    })
     if (result.requiresTwoFactor) {
       showView('two-factor-view')
       showMessage(result.message || '请输入两步验证码', 'info')
@@ -174,8 +301,12 @@ document.querySelector('#register-form').addEventListener('submit', async (event
       password,
       reason: document.querySelector('#register-reason').value.trim(),
     })
-    showMessage(result.message, result.success ? 'success' : 'error')
-    if (result.success) form.reset()
+    if (result.success) {
+      form.reset()
+      showApplicationStatus(result)
+    } else {
+      showMessage(result.message, 'error')
+    }
   } catch (error) {
     showMessage(error?.message || '提交申请失败', 'error')
   } finally {
@@ -272,3 +403,4 @@ async function loadServerStatus() {
 }
 
 void loadServerStatus()
+void loadSavedCredentials()

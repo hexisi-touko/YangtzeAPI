@@ -24,6 +24,7 @@ Copy-Item desktop.config.example.json desktop.config.json
     "login": "/api/user/login",
     "login2fa": "/api/user/login/2fa",
     "registrationApplication": "/api/user/registration-applications",
+    "registrationApplicationStatus": "/api/user/application/status",
     "passwordResetApplication": "/api/user/password-reset-applications",
     "passwordResetStatus": "/api/user/password-reset-applications/status",
     "passwordResetComplete": "/api/user/password-reset-applications/complete"
@@ -45,6 +46,8 @@ Copy-Item desktop.config.example.json desktop.config.json
 | `apiPaths` | 桌面客户端使用的固定站内接口路径 |
 
 找回密码使用三个接口路径：提交申请、查询审核状态、审批通过后完成密码重置。只改服务端路由时，可以分别修改 `passwordResetApplication`、`passwordResetStatus` 和 `passwordResetComplete`。
+
+仓库内的 `desktop.config.local-test.json` 已连接 `master` 分支通过 `compose.local.yaml` 启动的本地 New API，可直接使用 `npm run start:local-test` 联调。
 
 窗口有效尺寸固定为 `420 x 620`，不放入 JSON，防止修改品牌时意外破坏界面布局。
 

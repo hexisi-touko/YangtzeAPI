@@ -4,6 +4,7 @@ const path = require('node:path')
 const PROJECT_ROOT = path.join(__dirname, '..')
 const LOCAL_CONFIG_PATH = path.join(PROJECT_ROOT, 'desktop.config.json')
 const EXAMPLE_CONFIG_PATH = path.join(PROJECT_ROOT, 'desktop.config.example.json')
+const CONFIG_FILE_PATTERN = /^desktop\.config(?:\.[a-z0-9-]+)?\.json$/i
 const WINDOWS_RESERVED_NAME = /[<>:"/\\|?*\u0000-\u001f]/
 const WINDOWS_DEVICE_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
 
@@ -38,6 +39,22 @@ function validateAppIconPath(value) {
     throw new Error('appIconPath 必须指向 build 目录下的 ICO 文件')
   }
   return normalized
+}
+
+function validateAppId(value) {
+  const appId = requireText(value, 'appId', 160)
+  if (!/^[a-zA-Z0-9]+(?:[.-][a-zA-Z0-9]+)+$/.test(appId)) {
+    throw new Error('appId 必须是由字母、数字、点或连字符组成的反向域名')
+  }
+  return appId
+}
+
+function validateSessionPartition(value) {
+  const partition = requireText(value, 'sessionPartition', 120)
+  if (!/^persist:[a-zA-Z0-9._-]+$/.test(partition)) {
+    throw new Error('sessionPartition 必须使用 persist: 前缀且只包含安全字符')
+  }
+  return partition
 }
 
 function validateServerUrl(value, allowInsecureHttp) {
@@ -83,6 +100,11 @@ function parseConfig(raw) {
   return freezeConfig({
     productName: validateWindowsName(raw.productName, 'productName'),
     artifactBaseName: validateWindowsName(raw.artifactBaseName || 'API-Client', 'artifactBaseName'),
+    appId: validateAppId(raw.appId || 'com.apirelay.desktop'),
+    userDataDirectoryName: raw.userDataDirectoryName === undefined
+      ? null
+      : validateWindowsName(raw.userDataDirectoryName, 'userDataDirectoryName'),
+    sessionPartition: validateSessionPartition(raw.sessionPartition || 'persist:new-api-user'),
     logoPath: validateLogoPath(raw.logoPath || 'ui/assets/logo.svg'),
     appIconPath: validateAppIconPath(raw.appIconPath || 'build/icon.ico'),
     serverUrl: validateServerUrl(raw.serverUrl, allowInsecureHttp),
@@ -95,6 +117,10 @@ function parseConfig(raw) {
       registrationApplication: validatePath(
         apiPaths.registrationApplication || '/api/user/registration-applications',
         'apiPaths.registrationApplication',
+      ),
+      registrationApplicationStatus: validatePath(
+        apiPaths.registrationApplicationStatus || '/api/user/application/status',
+        'apiPaths.registrationApplicationStatus',
       ),
       passwordResetApplication: validatePath(
         apiPaths.passwordResetApplication || '/api/user/password-reset-applications',
@@ -112,8 +138,19 @@ function parseConfig(raw) {
   })
 }
 
-function loadDesktopConfig() {
-  const configPath = fs.existsSync(LOCAL_CONFIG_PATH) ? LOCAL_CONFIG_PATH : EXAMPLE_CONFIG_PATH
+function resolveConfigPath(configFileName) {
+  if (!configFileName) {
+    return fs.existsSync(LOCAL_CONFIG_PATH) ? LOCAL_CONFIG_PATH : EXAMPLE_CONFIG_PATH
+  }
+  const fileName = path.basename(configFileName)
+  if (fileName !== configFileName || !CONFIG_FILE_PATTERN.test(fileName)) {
+    throw new Error('桌面客户端配置文件名不合法')
+  }
+  return path.join(PROJECT_ROOT, fileName)
+}
+
+function loadDesktopConfig(configFileName = process.env.DESKTOP_CONFIG_FILE) {
+  const configPath = resolveConfigPath(configFileName)
   let raw
   try {
     raw = JSON.parse(fs.readFileSync(configPath, 'utf8'))
@@ -131,4 +168,5 @@ module.exports = {
   loadDesktopConfig,
   logoPathForLoginPage,
   parseConfig,
+  resolveConfigPath,
 }

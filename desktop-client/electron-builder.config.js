@@ -4,7 +4,7 @@ const desktopConfig = loadDesktopConfig()
 
 module.exports = {
   publish: null,
-  appId: 'com.apirelay.desktop',
+  appId: desktopConfig.appId,
   productName: desktopConfig.productName,
   asar: true,
   directories: {
