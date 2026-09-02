@@ -3,6 +3,7 @@ const path = require('node:path')
 const { loadDesktopConfig, logoPathForLoginPage } = require('./src/config')
 const { NewApiClient, NewApiClientError } = require('./src/new-api-client')
 const { PasswordResetStore } = require('./src/password-reset-store')
+const { CodexConfigError, CodexConfigManager } = require('./src/codex-config-manager')
 
 const desktopConfig = loadDesktopConfig()
 const LOGIN_WINDOW_WIDTH = 420
@@ -15,6 +16,7 @@ let apiSession = null
 let apiClient = null
 let passwordResetStore = null
 let pendingTwoFactor = null
+let codexConfigManager = null
 
 app.enableSandbox()
 app.setAppUserModelId('com.apirelay.desktop')
@@ -32,8 +34,28 @@ function requireLoginPage(event) {
   if (!isLoginPage(event)) throw new Error('Unauthorized window request')
 }
 
+function requireClientPortal(event) {
+  if (event.senderFrame !== event.sender.mainFrame) throw new Error('Unauthorized window request')
+  let sender
+  try {
+    sender = new URL(event.senderFrame.url)
+  } catch {
+    throw new Error('Unauthorized window request')
+  }
+  if (sender.origin !== desktopConfig.serverUrl || !/^\/client\/?$/.test(sender.pathname)) {
+    throw new Error('Unauthorized window request')
+  }
+}
+
 function publicError(error, fallback) {
   if (error instanceof NewApiClientError) {
+    return { success: false, message: error.message, code: error.code }
+  }
+  return { success: false, message: fallback, code: 'CLIENT_ERROR' }
+}
+
+function publicCodexError(error, fallback) {
+  if (error instanceof NewApiClientError || error instanceof CodexConfigError) {
     return { success: false, message: error.message, code: error.code }
   }
   return { success: false, message: fallback, code: 'CLIENT_ERROR' }
@@ -112,6 +134,7 @@ async function openUserWindow() {
     backgroundColor: '#ffffff',
     title: desktopConfig.productName,
     webPreferences: {
+      preload: path.join(__dirname, 'user-preload.js'),
       session: apiSession,
       nodeIntegration: false,
       contextIsolation: true,
@@ -305,6 +328,58 @@ function registerIpcHandlers() {
       return publicError(error, '重置密码失败')
     }
   })
+
+  ipcMain.handle('codex:status', (event) => {
+    requireClientPortal(event)
+    try {
+      return { ...codexConfigManager.inspect(), serviceReachable: null }
+    } catch (error) {
+      return publicCodexError(error, '无法读取 Codex 配置')
+    }
+  })
+
+  ipcMain.handle('codex:configure', async (event) => {
+    requireClientPortal(event)
+    try {
+      const apiKey = await apiClient.getApprovedApiKey()
+      const result = codexConfigManager.configure(apiKey)
+      const serviceReachable = await apiClient.validateApiKey(apiKey)
+      return {
+        ...result,
+        serviceReachable,
+        configured: result.configured && serviceReachable,
+        message: serviceReachable
+          ? result.ccSwitchDetected
+            ? 'Codex 配置完成；已兼容保留 CC Switch 和原有配置，请重启 Codex 生效'
+            : 'Codex 配置完成，原配置已保留并生成备份，请重启 Codex 生效'
+          : '本地配置已写入，但 API 连通检测未通过',
+      }
+    } catch (error) {
+      return publicCodexError(error, '配置 Codex 失败')
+    }
+  })
+
+  ipcMain.handle('codex:detect', async (event) => {
+    requireClientPortal(event)
+    try {
+      const apiKey = await apiClient.getApprovedApiKey()
+      const result = codexConfigManager.inspect(apiKey)
+      const serviceReachable = await apiClient.validateApiKey(apiKey)
+      const configured = result.configured && serviceReachable
+      return {
+        ...result,
+        serviceReachable,
+        configured,
+        message: configured
+          ? 'Codex 配置和 API 连通性均正常'
+          : result.externalProviderActive
+            ? '当前 Codex 供应商已被 CC Switch 或其他工具切换，请重新配置'
+            : '检测未通过，请重新配置或联系管理员检查服务',
+      }
+    } catch (error) {
+      return publicCodexError(error, '检测 Codex 配置失败')
+    }
+  })
 }
 
 app.whenReady().then(async () => {
@@ -316,6 +391,11 @@ app.whenReady().then(async () => {
   passwordResetStore = new PasswordResetStore({
     filePath: path.join(app.getPath('userData'), 'password-reset-request.bin'),
     safeStorage,
+  })
+  codexConfigManager = new CodexConfigManager({
+    codexHome: process.env.CODEX_HOME || path.join(app.getPath('home'), '.codex'),
+    serverUrl: desktopConfig.serverUrl,
+    providerName: desktopConfig.productName,
   })
   registerIpcHandlers()
   await createLoginWindow()

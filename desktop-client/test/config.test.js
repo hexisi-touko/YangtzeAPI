@@ -9,7 +9,7 @@ function validConfig(overrides = {}) {
     logoPath: 'ui/assets/logo.svg',
     appIconPath: 'build/icon.ico',
     serverUrl: 'https://api.example.com',
-    userPagePath: '/dashboard',
+    userPagePath: '/client',
     allowInsecureHttp: false,
     apiPaths: {},
     ...overrides,
@@ -20,6 +20,8 @@ test('parseConfig normalizes the public desktop settings', () => {
   const config = parseConfig(validConfig({ serverUrl: 'https://api.example.com/' }))
   assert.equal(config.serverUrl, 'https://api.example.com')
   assert.equal(config.apiPaths.login, '/api/user/login')
+  assert.equal(config.apiPaths.authRefresh, '/api/user/auth/refresh')
+  assert.equal(config.apiPaths.tokenList, '/api/token/?p=1&size=100')
   assert.equal(config.apiPaths.registrationApplication, '/api/user/registration-applications')
   assert.equal(config.apiPaths.passwordResetApplication, '/api/user/password-reset-applications')
   assert.equal(config.apiPaths.passwordResetStatus, '/api/user/password-reset-applications/status')

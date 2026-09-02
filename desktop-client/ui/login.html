@@ -39,10 +39,13 @@
           <span>账号</span>
           <input id="login-username" autocomplete="username" required placeholder="手机号 / 邮箱 / 用户名">
         </label>
-        <label class="field">
-          <span>密码</span>
-          <input id="login-password" type="password" autocomplete="current-password" required placeholder="请输入密码">
-        </label>
+        <div class="field">
+          <label for="login-password">密码</label>
+          <div class="password-input">
+            <input id="login-password" type="password" autocomplete="current-password" required placeholder="请输入密码">
+            <button class="password-toggle" type="button" data-password-target="login-password" aria-label="显示密码" aria-pressed="false" title="显示密码">&#128065;&#xfe0e;</button>
+          </div>
+        </div>
         <div class="form-options">
           <label class="checkbox"><input id="remember-username" type="checkbox" checked> 记住账号</label>
           <button id="password-reset-button" class="text-button" type="button" data-view="forgot-view">忘记密码</button>
@@ -58,8 +61,20 @@
       <h2 id="register-title">注册账号</h2>
       <form id="register-form">
         <label class="field"><span>用户名</span><input id="register-username" autocomplete="username" minlength="3" maxlength="20" required placeholder="3-20 个字符"></label>
-        <label class="field"><span>密码</span><input id="register-password" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="8-20 个字符"></label>
-        <label class="field"><span>确认密码</span><input id="register-confirm" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="再次输入密码"></label>
+        <div class="field">
+          <label for="register-password">密码</label>
+          <div class="password-input">
+            <input id="register-password" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="8-20 个字符">
+            <button class="password-toggle" type="button" data-password-target="register-password" aria-label="显示密码" aria-pressed="false" title="显示密码">&#128065;&#xfe0e;</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="register-confirm">确认密码</label>
+          <div class="password-input">
+            <input id="register-confirm" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="再次输入密码">
+            <button class="password-toggle" type="button" data-password-target="register-confirm" aria-label="显示密码" aria-pressed="false" title="显示密码">&#128065;&#xfe0e;</button>
+          </div>
+        </div>
         <label class="field"><span>申请理由</span><textarea id="register-reason" minlength="5" maxlength="300" required placeholder="请简要说明账号用途"></textarea></label>
         <button class="primary-button" type="submit">提交申请</button>
       </form>

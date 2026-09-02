@@ -1,6 +1,6 @@
 # New API Windows 桌面客户端
 
-这是一个 Electron 桌面客户端，提供固定尺寸的本地登录、注册申请、两步验证和找回密码界面。登录成功后，客户端使用同一持久会话打开配置的 New API 用户页面。
+这是一个 Electron 桌面客户端，提供固定尺寸的本地登录、注册申请、两步验证和找回密码界面。登录成功后，客户端使用同一持久会话打开配置的 New API 成员页面，并可安全地配置和检测本机 Codex。
 
 产品名称、安装包文件名、Logo、服务器地址、用户页面路径和接口路径都由 `desktop.config.json` 管理，不需要在源码中逐处改名。
 
@@ -22,9 +22,11 @@
 desktop-client/
 ├─ main.js                         Electron 窗口、IPC 和会话
 ├─ preload.js                      受限的页面桥接
+├─ user-preload.js                 成员页面的 Codex 配置桥接
 ├─ src/
 │  ├─ config.js                    JSON 加载与安全校验
 │  ├─ new-api-client.js            New API 请求适配器
+│  ├─ codex-config-manager.js       Codex 配置检测、备份和写入
 │  └─ password-reset-store.js      Windows 加密申请凭证存储
 ├─ ui/                             本地登录界面
 ├─ test/                           Node 单元测试
@@ -47,6 +49,12 @@ npm start
 ```
 
 正式环境应把 `serverUrl` 配置为 HTTPS，并保持 `allowInsecureHttp` 为 `false`。本地 HTTP 仅用于开发测试，不要使用正式账号密码。
+
+“配置 Codex”使用与 CC Switch 兼容的独立 `yangtze_api` 供应商配置。API Key 写入该供应商的 `experimental_bearer_token`，不会覆盖 `auth.json` 中的官方登录，也不会删除其他供应商、模型、插件和 MCP 设置。写入前的文件备份位于 `%CODEX_HOME%\.yangtze-backups`，未设置 `CODEX_HOME` 时默认使用 `%USERPROFILE%\.codex`。
+
+客户端与 CC Switch 都可能切换当前 `model_provider`。成员在 CC Switch 中切到其他供应商后，客户端会显示“当前供应商已切换”；再次点击“配置 Codex”即可切回本项目服务。配置变更后需要重启 Codex。
+
+该兼容层参考了 [CC Switch](https://github.com/farion1231/cc-switch)（MIT）的供应商级凭据、配置保护和切换思路，并按 Electron/Node 重新实现；客户端不要求成员额外安装 CC Switch。
 
 ## 构建
 

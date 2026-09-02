@@ -51,6 +51,7 @@ const forgotApplicationStage = document.querySelector('#forgot-application-stage
 const forgotStatusStage = document.querySelector('#forgot-status-stage')
 const forgotResetStage = document.querySelector('#forgot-reset-stage')
 const forgotStatusUsername = document.querySelector('#forgot-status-username')
+const passwordToggleButtons = Array.from(document.querySelectorAll('[data-password-target]'))
 const logoCandidates = Array.from(new Set([configuredLogoPath, 'assets/logo.svg', 'assets/logo.png']))
 let logoCandidateIndex = 0
 
@@ -111,6 +112,23 @@ async function refreshPasswordResetState() {
 function setBusy(form, busy) {
   form.querySelectorAll('button, input, textarea').forEach((element) => { element.disabled = busy })
 }
+
+function setPasswordVisibility(button, visible) {
+  const input = document.getElementById(button.dataset.passwordTarget)
+  if (!input) return
+  input.type = visible ? 'text' : 'password'
+  button.setAttribute('aria-pressed', String(visible))
+  button.setAttribute('aria-label', visible ? '隐藏密码' : '显示密码')
+  button.title = visible ? '隐藏密码' : '显示密码'
+}
+
+passwordToggleButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const visible = button.getAttribute('aria-pressed') !== 'true'
+    setPasswordVisibility(button, visible)
+    document.getElementById(button.dataset.passwordTarget)?.focus()
+  })
+})
 
 document.querySelector('#minimize-button').addEventListener('click', () => window.desktopWindow.minimize())
 document.querySelector('#close-button').addEventListener('click', () => window.desktopWindow.close())

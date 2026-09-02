@@ -10,7 +10,7 @@ function config() {
     logoPath: 'ui/assets/logo.svg',
     appIconPath: 'build/icon.ico',
     serverUrl: 'https://api.example.com',
-    userPagePath: '/dashboard',
+    userPagePath: '/client',
     allowInsecureHttp: false,
     apiPaths: {},
   })
@@ -36,7 +36,7 @@ function clientWith(handler) {
 }
 
 test('login sends only username and password to the fixed login endpoint', async () => {
-  const { client, requests } = clientWith(() => response({ success: true, data: { access_token: 'secret' } }))
+  const { client, requests } = clientWith(() => response({ success: true, data: { access_token: 'secret', session: { sid: 'session-1' } } }))
   const result = await client.login({ username: 'alice', password: 'correct horse' })
   assert.equal(result.authenticated, true)
   assert.equal(requests[0].url, 'https://api.example.com/api/user/login')
@@ -137,4 +137,49 @@ test('server business errors are returned as bounded client errors', async () =>
     () => client.login({ username: 'alice', password: 'password' }),
     (error) => error instanceof NewApiClientError && error.code === 'ACCOUNT_PENDING',
   )
+})
+
+test('approved client key is selected and fetched without leaking it through the list', async () => {
+  const { client, requests } = clientWith((url) => {
+    if (url.endsWith('/api/token/?p=1&size=100')) {
+      return response({
+        success: true,
+        data: { items: [{ id: 7, name: 'alice approved access key', status: 1, key: 'sk-****' }] },
+      })
+    }
+    return response({ success: true, data: { key: 'sk-approved-member-key' } })
+  })
+  client.accessToken = 'dashboard-token'
+  client.sessionId = 'session-1'
+
+  const key = await client.getApprovedApiKey()
+  assert.equal(key, 'sk-approved-member-key')
+  assert.equal(requests[0].options.headers.Authorization, 'Bearer dashboard-token')
+  assert.equal(requests[1].url, 'https://api.example.com/api/token/7/key')
+})
+
+test('authenticated request refreshes a rotated browser session once and retries', async () => {
+  let tokenListAttempts = 0
+  const { client, requests } = clientWith((url) => {
+    if (url.endsWith('/api/user/auth/refresh')) {
+      return response({
+        success: true,
+        data: { access_token: 'refreshed-token', session: { sid: 'session-1' } },
+      })
+    }
+    if (url.endsWith('/api/token/?p=1&size=100')) {
+      tokenListAttempts += 1
+      if (tokenListAttempts === 1) return response({ success: false }, 401)
+      return response({ success: true, data: { items: [{ id: 8, name: 'approved', status: 1 }] } })
+    }
+    return response({ success: true, data: { key: 'sk-refreshed-key' } })
+  })
+  client.accessToken = 'expired-token'
+  client.sessionId = 'session-1'
+
+  assert.equal(await client.getApprovedApiKey(), 'sk-refreshed-key')
+  const refreshRequest = requests.find((request) => request.url.endsWith('/api/user/auth/refresh'))
+  assert.equal(refreshRequest.options.headers.Origin, 'https://api.example.com')
+  assert.equal(refreshRequest.options.headers['X-Auth-Session'], 'session-1')
+  assert.equal(requests.at(-1).options.headers.Authorization, 'Bearer refreshed-token')
 })

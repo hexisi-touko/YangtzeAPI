@@ -17,12 +17,15 @@ Copy-Item desktop.config.example.json desktop.config.json
   "logoPath": "ui/assets/logo.svg",
   "appIconPath": "build/icon.ico",
   "serverUrl": "https://api.example.com",
-  "userPagePath": "/dashboard",
+  "userPagePath": "/client",
   "allowInsecureHttp": false,
   "apiPaths": {
     "status": "/api/status",
     "login": "/api/user/login",
     "login2fa": "/api/user/login/2fa",
+    "authRefresh": "/api/user/auth/refresh",
+    "tokenList": "/api/token/?p=1&size=100",
+    "tokenUsage": "/api/token/usage",
     "registrationApplication": "/api/user/registration-applications",
     "passwordResetApplication": "/api/user/password-reset-applications",
     "passwordResetStatus": "/api/user/password-reset-applications/status",
@@ -40,11 +43,11 @@ Copy-Item desktop.config.example.json desktop.config.json
 | `logoPath` | 登录页 Logo，只允许 `ui/assets` 下的 SVG 或 PNG |
 | `appIconPath` | 构建时自动生成的 Windows ICO 路径，通常不需要修改 |
 | `serverUrl` | New API 站点根地址，不带 `/api` 和页面路径 |
-| `userPagePath` | 登录成功后打开的 New API 用户页面 |
+| `userPagePath` | 登录成功后打开的 New API 用户页面，当前为 `/client` |
 | `allowInsecureHttp` | 仅本地测试或临时内网环境使用；正式发布必须为 `false` |
 | `apiPaths` | 桌面客户端使用的固定站内接口路径 |
 
-找回密码使用三个接口路径：提交申请、查询审核状态、审批通过后完成密码重置。只改服务端路由时，可以分别修改 `passwordResetApplication`、`passwordResetStatus` 和 `passwordResetComplete`。
+`authRefresh` 用于成员网页加载后刷新桌面客户端的登录会话；`tokenList` 用于选择管理员发放的唯一启用 Key；`tokenUsage` 用于检测 Key 和 New API 服务是否可用。找回密码使用另外三个接口路径：提交申请、查询审核状态、审批通过后完成密码重置。
 
 窗口有效尺寸固定为 `420 x 620`，不放入 JSON，防止修改品牌时意外破坏界面布局。
 

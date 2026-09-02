@@ -77,6 +77,17 @@ app.whenReady().then(async () => {
   if (loginLayout.pageHeight > loginLayout.viewportHeight) {
     throw new Error(`Login view overflows: ${loginLayout.pageHeight}px > ${loginLayout.viewportHeight}px`)
   }
+  const loginPasswordToggle = await window.webContents.executeJavaScript(`(() => {
+    const input = document.querySelector('#login-password')
+    const button = document.querySelector('[data-password-target="login-password"]')
+    button.click()
+    const visibleType = input.type
+    button.click()
+    return { count: document.querySelectorAll('#login-form .password-toggle').length, visibleType, hiddenType: input.type }
+  })()`)
+  if (loginPasswordToggle.count !== 1 || loginPasswordToggle.visibleType !== 'text' || loginPasswordToggle.hiddenType !== 'password') {
+    throw new Error(`Login password toggle failed: ${JSON.stringify(loginPasswordToggle)}`)
+  }
   const outputDir = path.join(__dirname, '..', 'artifacts')
   fs.mkdirSync(outputDir, { recursive: true })
   fs.writeFileSync(path.join(outputDir, 'login-window.png'), await captureWindow(window))
@@ -97,6 +108,17 @@ app.whenReady().then(async () => {
   }
   if (registerState.pageHeight > registerState.viewportHeight) {
     throw new Error(`Register view overflows: ${registerState.pageHeight}px > ${registerState.viewportHeight}px`)
+  }
+  const registerPasswordToggles = await window.webContents.executeJavaScript(`(() => {
+    const buttons = Array.from(document.querySelectorAll('#register-form .password-toggle'))
+    buttons.forEach((button) => button.click())
+    const visibleTypes = ['register-password', 'register-confirm'].map((id) => document.getElementById(id).type)
+    buttons.forEach((button) => button.click())
+    const hiddenTypes = ['register-password', 'register-confirm'].map((id) => document.getElementById(id).type)
+    return { count: buttons.length, visibleTypes, hiddenTypes }
+  })()`)
+  if (registerPasswordToggles.count !== 2 || registerPasswordToggles.visibleTypes.some((type) => type !== 'text') || registerPasswordToggles.hiddenTypes.some((type) => type !== 'password')) {
+    throw new Error(`Register password toggles failed: ${JSON.stringify(registerPasswordToggles)}`)
   }
   fs.writeFileSync(path.join(outputDir, 'register-window.png'), await captureWindow(window))
   await window.webContents.executeJavaScript("showView('forgot-view')")

@@ -86,12 +86,15 @@ function parseConfig(raw) {
     logoPath: validateLogoPath(raw.logoPath || 'ui/assets/logo.svg'),
     appIconPath: validateAppIconPath(raw.appIconPath || 'build/icon.ico'),
     serverUrl: validateServerUrl(raw.serverUrl, allowInsecureHttp),
-    userPagePath: validatePath(raw.userPagePath || '/dashboard', 'userPagePath'),
+    userPagePath: validatePath(raw.userPagePath || '/client', 'userPagePath'),
     allowInsecureHttp,
     apiPaths: {
       status: validatePath(apiPaths.status || '/api/status', 'apiPaths.status'),
       login: validatePath(apiPaths.login || '/api/user/login', 'apiPaths.login'),
       login2fa: validatePath(apiPaths.login2fa || '/api/user/login/2fa', 'apiPaths.login2fa'),
+      authRefresh: validatePath(apiPaths.authRefresh || '/api/user/auth/refresh', 'apiPaths.authRefresh'),
+      tokenList: validatePath(apiPaths.tokenList || '/api/token/?p=1&size=100', 'apiPaths.tokenList'),
+      tokenUsage: validatePath(apiPaths.tokenUsage || '/api/token/usage', 'apiPaths.tokenUsage'),
       registrationApplication: validatePath(
         apiPaths.registrationApplication || '/api/user/registration-applications',
         'apiPaths.registrationApplication',

@@ -36,6 +36,8 @@ class NewApiClient {
     this.config = config
     this.session = session
     this.timeoutMs = timeoutMs
+    this.accessToken = ''
+    this.sessionId = ''
   }
 
   buildUrl(apiPath, query = {}) {
@@ -47,7 +49,7 @@ class NewApiClient {
     return url.toString()
   }
 
-  async request(apiPath, { method = 'GET', body, query } = {}) {
+  async request(apiPath, { method = 'GET', body, query, headers = {}, useAuth = true, retryAuth = true } = {}) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs)
     let response
@@ -58,6 +60,8 @@ class NewApiClient {
         headers: {
           Accept: 'application/json',
           ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...(useAuth && this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {}),
+          ...headers,
         },
         credentials: 'include',
         cache: 'no-store',
@@ -91,6 +95,11 @@ class NewApiClient {
       })
     }
 
+    if (response.status === 401 && useAuth && retryAuth && this.sessionId) {
+      await this.refreshAuthentication()
+      return this.request(apiPath, { method, body, query, headers, useAuth, retryAuth: false })
+    }
+
     if (!response.ok || payload?.success === false) {
       throw new NewApiClientError(responseMessage(payload, `服务器请求失败（${response.status}）`), {
         code: typeof payload?.code === 'string' ? payload.code : 'SERVER_ERROR',
@@ -98,6 +107,29 @@ class NewApiClient {
       })
     }
     return payload
+  }
+
+  captureAuthBundle(payload) {
+    const accessToken = payload?.data?.access_token
+    const sessionId = payload?.data?.session?.sid
+    if (typeof accessToken !== 'string' || !accessToken || typeof sessionId !== 'string' || !sessionId) {
+      throw new NewApiClientError('服务器登录响应缺少会话信息', { code: 'INVALID_AUTH_RESPONSE' })
+    }
+    this.accessToken = accessToken
+    this.sessionId = sessionId
+  }
+
+  async refreshAuthentication() {
+    const payload = await this.request(this.config.apiPaths.authRefresh, {
+      method: 'POST',
+      headers: {
+        Origin: this.config.serverUrl,
+        'X-Auth-Session': this.sessionId,
+      },
+      useAuth: false,
+      retryAuth: false,
+    })
+    this.captureAuthBundle(payload)
   }
 
   async getStatus() {
@@ -135,18 +167,59 @@ class NewApiClient {
         message: responseMessage(payload, '请输入两步验证码'),
       }
     }
+    this.captureAuthBundle(payload)
     return { authenticated: true, requiresTwoFactor: false, message: '登录成功' }
   }
 
   async verifyTwoFactor({ code, flowToken }) {
-    await this.request(this.config.apiPaths.login2fa, {
+    const payload = await this.request(this.config.apiPaths.login2fa, {
       method: 'POST',
       body: {
         code: requireValue(code, '验证码', 16),
         flow_token: requireValue(flowToken, '两步验证流程令牌', 2048),
       },
     })
+    this.captureAuthBundle(payload)
     return { authenticated: true, message: '验证成功' }
+  }
+
+  async getApprovedApiKey() {
+    const payload = await this.request(this.config.apiPaths.tokenList)
+    const items = Array.isArray(payload?.data?.items) ? payload.data.items : []
+    const enabled = items.filter((item) => item?.status === 1 && Number.isInteger(item?.id))
+    if (enabled.length === 0) {
+      throw new NewApiClientError('当前账号没有已启用的 API Key，请联系管理员', { code: 'API_KEY_NOT_READY' })
+    }
+    const approved = enabled.filter((item) => String(item.name || '').includes('approved access key'))
+    if (enabled.length > 1 && approved.length !== 1) {
+      throw new NewApiClientError('当前账号存在多个已启用 Key，无法确定客户端应使用哪一个', { code: 'AMBIGUOUS_API_KEY' })
+    }
+    const selected = approved[0] || enabled[0]
+    const keyPayload = await this.request(`/api/token/${selected.id}/key`, { method: 'POST' })
+    const key = keyPayload?.data?.key
+    if (typeof key !== 'string' || !key.startsWith('sk-')) {
+      throw new NewApiClientError('服务器返回的 API Key 无效', { code: 'INVALID_API_KEY' })
+    }
+    return key
+  }
+
+  async validateApiKey(apiKey) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs)
+    try {
+      const response = await this.session.fetch(this.buildUrl(this.config.apiPaths.tokenUsage), {
+        method: 'GET',
+        headers: { Accept: 'application/json', Authorization: `Bearer ${apiKey}` },
+        cache: 'no-store',
+        redirect: 'error',
+        signal: controller.signal,
+      })
+      return response.ok
+    } catch {
+      return false
+    } finally {
+      clearTimeout(timeout)
+    }
   }
 
   async submitRegistrationApplication({ username, password, reason }) {
