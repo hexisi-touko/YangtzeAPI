@@ -73,6 +73,8 @@ export function ClientPortal() {
   )
   let clientStatusLabel = t('未检测到桌面客户端')
   if (desktopBridge) clientStatusLabel = t('尚未完成配置')
+  if (clientStatus?.locallyConfigured) clientStatusLabel = t('本地配置已写入')
+  if (clientStatus?.externalProviderActive) clientStatusLabel = t('当前供应商已切换')
   if (clientStatus?.configured) clientStatusLabel = t('配置正常')
 
   const copyServiceUrl = async () => {
@@ -242,6 +244,9 @@ export function ClientPortal() {
                     {t('API 连接正常')}
                   </Badge>
                 )}
+                {clientStatus?.ccSwitchDetected && (
+                  <Badge variant='outline'>{t('已兼容 CC Switch')}</Badge>
+                )}
                 {clientStatus?.codexHome && (
                   <span className='text-muted-foreground text-xs'>
                     {t('配置目录：{{path}}', { path: clientStatus.codexHome })}
@@ -276,7 +281,9 @@ export function ClientPortal() {
                 </Button>
                 <span className='text-muted-foreground text-xs'>
                   {clientStatus?.message ||
-                    t('配置时会使用管理员审核后发放的唯一 API Key')}
+                    (clientStatus?.externalProviderActive
+                      ? t('CC Switch 已切换到其他供应商，点击配置 Codex 可切回本服务')
+                      : t('配置时会使用管理员审核后发放的唯一 API Key'))}
                 </span>
               </div>
             </CardContent>
