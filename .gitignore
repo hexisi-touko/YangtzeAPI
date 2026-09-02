@@ -1,31 +1,20 @@
 .env
 *.env.local
-desktop-client/node_modules/
-desktop-client/dist/
-desktop-client/artifacts/
-desktop-client/desktop.config.json
-backups/
-data/
-logs/
-postgres/
-redis/
-caddy/data/
-caddy/config/
-
-# Local load-test output may contain real endpoints, request IDs, and response previews.
-/busy-test.json
-/idle-routing.json
-/occupy-a.json
-/result-*.json
-/load-balance-results.json
-
-# Local AI/project context is not part of the public deliverable.
-/CONTEXT.md
-
-# Editor and operating-system files.
+node_modules/
+dist/
+artifacts/
+desktop.config.json
+*.log
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
-*.log
-*.dump
+
+# Local AI/project context is not part of the public deliverable.
+/CONTEXT.md
+
+# Existing local test output is not part of the desktop client source.
+/busy-test.json
+/idle-routing.json
+/occupy-a.json
+/result-*.json

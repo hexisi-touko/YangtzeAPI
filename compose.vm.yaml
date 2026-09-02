@@ -1,9 +1,0 @@
-# VMware-only rehearsal override. Do not use this file on a public server.
-services:
-  new-api:
-    ports:
-      - "3000:3000"
-
-  caddy:
-    profiles:
-      - tls
