@@ -53,6 +53,17 @@
 
 </div>
 
+> [!IMPORTANT]
+> 当前 `master` 分支是与本仓库 `main` 分支 Windows 客户端配套的修改版源码。请使用下面的本地 Compose 文件从当前源码构建；不要使用预编译的官方镜像，否则注册审核、申请状态和找回密码等配套接口不会生效。
+
+```powershell
+docker compose -f compose.local.yaml up -d --build
+```
+
+服务启动后监听 `http://127.0.0.1:3000`，可直接连接 `main` 分支中的 LocalTest 客户端。SQLite 数据保存在当前目录的 `data` 文件夹中，重新构建镜像不会删除该目录；数据库、日志、`.env`、依赖和构建产物不会提交到 Git。
+
+配套说明见 [README_TEAM.md](./README_TEAM.md)。
+
 ## 📝 Project Description
 
 > [!IMPORTANT]
