@@ -29,6 +29,7 @@ import type {
   Login2FAResponse,
   TwoFAPayload,
   RegisterPayload,
+  RegistrationApplication,
   ApiResponse,
 } from './types'
 
@@ -181,7 +182,9 @@ export async function telegramLogin(
 // ----------------------------------------------------------------------------
 
 // User registration
-export async function register(payload: RegisterPayload): Promise<ApiResponse> {
+export async function register(
+  payload: RegisterPayload
+): Promise<ApiResponse<RegistrationApplication>> {
   const res = await api.post(`/api/user/register`, payload, {
     params: { turnstile: payload.turnstile ?? '' },
   })

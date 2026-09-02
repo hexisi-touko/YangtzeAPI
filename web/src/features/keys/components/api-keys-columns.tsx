@@ -73,14 +73,17 @@ function useGroupRatios(): Record<string, number | string> {
   return data ?? {}
 }
 
-export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
+export function useApiKeysColumns(
+  now: number,
+  readOnly = false
+): ColumnDef<ApiKey>[] {
   const { t, i18n } = useTranslation()
   const groupRatios = useGroupRatios()
   const shouldReduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   const justNowLabel = t('Just now')
   const staleAccessThreshold = dayjs(now).subtract(3, 'month').valueOf()
-  return [
+  const columns: ColumnDef<ApiKey>[] = [
     {
       id: 'select',
       header: ({ table }) => (
@@ -300,4 +303,9 @@ export function useApiKeysColumns(now: number): ColumnDef<ApiKey>[] {
       meta: { pinned: 'right' as const },
     },
   ]
+  return readOnly
+    ? columns.filter(
+        (column) => column.id !== 'select' && column.id !== 'actions'
+      )
+    : columns
 }

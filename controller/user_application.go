@@ -16,9 +16,7 @@ import (
 )
 
 const (
-	applicationReasonMinLength = 10
-	applicationReasonMaxLength = 500
-	reviewCommentMaxLength     = 500
+	reviewCommentMaxLength = 500
 )
 
 type applicationDecisionRequest struct {
@@ -27,9 +25,8 @@ type applicationDecisionRequest struct {
 
 func normalizeApplicationReason(reason string) (string, error) {
 	reason = strings.TrimSpace(reason)
-	length := utf8.RuneCountInString(reason)
-	if length < applicationReasonMinLength || length > applicationReasonMaxLength {
-		return "", errors.New("application reason must contain 10 to 500 characters")
+	if reason == "" {
+		return "", errors.New("application reason is required")
 	}
 	return reason, nil
 }

@@ -23,16 +23,16 @@ var (
 )
 
 type UserApplication struct {
-	Id            int                   `json:"id"`
-	UserId        int                   `json:"user_id" gorm:"not null;index"`
-	Reason        string                `json:"reason" gorm:"type:text;not null"`
-	Status        UserApplicationStatus `json:"status" gorm:"type:varchar(16);not null;index"`
-	ReviewerId    *int                  `json:"reviewer_id" gorm:"index"`
-	ReviewComment string                `json:"review_comment" gorm:"type:text"`
-	ReviewedAt    int64                 `json:"reviewed_at" gorm:"bigint;default:0"`
-	IssuedTokenId *int                  `json:"issued_token_id" gorm:"index"`
-	CreatedAt     int64                 `json:"created_at" gorm:"bigint;autoCreateTime"`
-	UpdatedAt     int64                 `json:"updated_at" gorm:"bigint;autoUpdateTime"`
+	Id            int                   `json:"id" gorm:"primaryKey;comment:申请编号"`
+	UserId        int                   `json:"user_id" gorm:"not null;index;comment:申请用户编号"`
+	Reason        string                `json:"reason" gorm:"type:text;not null;comment:注册申请理由"`
+	Status        UserApplicationStatus `json:"status" gorm:"type:varchar(16);not null;index;comment:审核状态"`
+	ReviewerId    *int                  `json:"reviewer_id" gorm:"index;comment:审核管理员编号"`
+	ReviewComment string                `json:"review_comment" gorm:"type:text;comment:审核意见"`
+	ReviewedAt    int64                 `json:"reviewed_at" gorm:"bigint;default:0;comment:审核时间"`
+	IssuedTokenId *int                  `json:"issued_token_id" gorm:"index;comment:审核通过后签发的令牌编号"`
+	CreatedAt     int64                 `json:"created_at" gorm:"bigint;autoCreateTime;comment:创建时间"`
+	UpdatedAt     int64                 `json:"updated_at" gorm:"bigint;autoUpdateTime;comment:更新时间"`
 }
 
 type UserApplicationListItem struct {

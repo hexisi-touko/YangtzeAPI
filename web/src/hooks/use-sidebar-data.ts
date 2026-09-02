@@ -88,6 +88,7 @@ export function useSidebarData(): SidebarData {
             title: t('Dashboard'),
             url: '/dashboard/models',
             icon: LayoutDashboard,
+            requiredRole: ROLE.ADMIN,
           },
           {
             title: t('API Keys'),
@@ -105,6 +106,7 @@ export function useSidebarData(): SidebarData {
             activeUrls: ['/usage-logs/drawing'],
             configUrls: ['/usage-logs/drawing', '/usage-logs/task'],
             icon: ListTodo,
+            requiredRole: ROLE.ADMIN,
           },
         ],
       },

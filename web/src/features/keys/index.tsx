@@ -19,6 +19,8 @@ For commercial licensing, please contact support@quantumnous.com
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
+import { ROLE } from '@/lib/roles'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { ApiKeysDialogs } from './components/api-keys-dialogs'
 import { ApiKeysPrimaryButtons } from './components/api-keys-primary-buttons'
@@ -27,19 +29,21 @@ import { ApiKeysTable } from './components/api-keys-table'
 
 export function ApiKeys() {
   const { t } = useTranslation()
+  const role = useAuthStore((state) => state.auth.user?.role)
+  const readOnly = role === ROLE.USER
   return (
     <ApiKeysProvider>
       <SectionPageLayout fixedContent>
         <SectionPageLayout.Title>{t('API Keys')}</SectionPageLayout.Title>
         <SectionPageLayout.Actions>
-          <ApiKeysPrimaryButtons />
+          {!readOnly && <ApiKeysPrimaryButtons />}
         </SectionPageLayout.Actions>
         <SectionPageLayout.Content>
-          <ApiKeysTable />
+          <ApiKeysTable readOnly={readOnly} />
         </SectionPageLayout.Content>
       </SectionPageLayout>
 
-      <ApiKeysDialogs />
+      {!readOnly && <ApiKeysDialogs />}
     </ApiKeysProvider>
   )
 }

@@ -71,6 +71,9 @@ func SetApiRouter(router *gin.Engine) {
 			userRoute.POST("/auth/logout", middleware.SessionCookieOriginGuard(), middleware.CriticalRateLimit(), middleware.DisableCache(), controller.AuthLogout)
 			userRoute.POST("/register", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, middleware.TurnstileCheck(), controller.Register)
 			userRoute.POST("/registration-applications", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, middleware.TurnstileCheck(), controller.Register)
+			userRoute.POST("/password-reset-applications", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.SubmitPasswordResetApplication)
+			userRoute.POST("/password-reset-applications/status", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.GetPasswordResetApplicationStatus)
+			userRoute.POST("/password-reset-applications/complete", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.CompletePasswordResetApplication)
 			userRoute.POST("/application/status", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.GetOwnApplicationStatus)
 			userRoute.POST("/login", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, middleware.TurnstileCheck(), controller.Login)
 			userRoute.POST("/login/2fa", middleware.CriticalRateLimit(), middleware.DisableCache(), anonymousRequestBodyLimit, controller.Verify2FALogin)
@@ -80,6 +83,14 @@ func SetApiRouter(router *gin.Engine) {
 			userRoute.POST("/epay/notify", anonymousRequestBodyLimit, controller.EpayNotify)
 			userRoute.GET("/epay/notify", controller.EpayNotify)
 			userRoute.GET("/groups", controller.GetUserGroups)
+
+			passwordResetApplicationAdminRoute := userRoute.Group("/password-reset-applications")
+			passwordResetApplicationAdminRoute.Use(middleware.AdminAuth())
+			{
+				passwordResetApplicationAdminRoute.GET("", controller.AdminListPasswordResetApplications)
+				passwordResetApplicationAdminRoute.POST("/:id/approve", controller.AdminApprovePasswordResetApplication)
+				passwordResetApplicationAdminRoute.POST("/:id/reject", controller.AdminRejectPasswordResetApplication)
+			}
 
 			selfRoute := userRoute.Group("/")
 			selfRoute.Use(middleware.UserAuth())

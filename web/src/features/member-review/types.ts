@@ -49,3 +49,32 @@ export interface UserApplicationDecisionResponse {
     created_at: number
   }
 }
+
+export interface PasswordResetApplication {
+  id: number
+  user_id: number
+  username: string
+  display_name: string
+  user_status: number
+  reason: string
+  status: UserApplicationStatus
+  reviewer_id: number | null
+  reviewer_username: string
+  review_note: string
+  reviewed_at: number
+  used_at: number
+  expires_at: number
+  created_at: number
+  updated_at: number
+}
+
+export interface PasswordResetApplicationListResponse {
+  success: boolean
+  message?: string
+  data?: {
+    items: PasswordResetApplication[]
+    total: number
+    page: number
+    page_size: number
+  }
+}

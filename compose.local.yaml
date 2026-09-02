@@ -1,0 +1,15 @@
+services:
+  new-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yangtze-new-api:local
+    container_name: new-api-local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      TZ: Asia/Shanghai
+      TRUSTED_PROXIES: none
+    volumes:
+      - ./data:/data

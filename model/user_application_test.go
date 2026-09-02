@@ -24,7 +24,7 @@ func setupUserApplicationTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	require.NoError(t, err)
 	DB, LOG_DB = db, db
-	require.NoError(t, db.AutoMigrate(&User{}, &UserApplication{}, &Token{}, &Log{}, &UserSession{}))
+	require.NoError(t, db.AutoMigrate(&User{}, &UserApplication{}, &PasswordResetApplication{}, &SchemaColumnDescription{}, &Token{}, &Log{}, &UserSession{}))
 
 	t.Cleanup(func() {
 		DB, LOG_DB = previousDB, previousLogDB

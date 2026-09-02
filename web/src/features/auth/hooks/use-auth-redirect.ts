@@ -23,7 +23,9 @@ import {
   getSavedLanguage,
   sanitizeAuthRedirect,
 } from '@/features/auth/lib/auth-redirect'
-import { applyAuthBundle } from '@/lib/api'
+import { logout } from '@/features/auth/api'
+import { applyAuthBundle, clearAuthentication } from '@/lib/api'
+import { ROLE } from '@/lib/roles'
 import type { AuthBundle } from '@/stores/auth-store'
 
 /**
@@ -41,6 +43,15 @@ export function useAuthRedirect() {
     bundle: AuthBundle,
     redirectTo?: string
   ) => {
+    if (bundle.user.role < ROLE.ADMIN) {
+      applyAuthBundle(bundle)
+      try {
+        await logout()
+      } finally {
+        clearAuthentication()
+      }
+      throw new Error('普通用户请使用桌面客户端登录')
+    }
     applyAuthBundle(bundle)
     const savedLang = getSavedLanguage(bundle.user)
     if (savedLang && savedLang !== i18n.language) {

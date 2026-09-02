@@ -263,6 +263,8 @@ func migrateDB() error {
 		&Token{},
 		&User{},
 		&UserApplication{},
+		&PasswordResetApplication{},
+		&SchemaColumnDescription{},
 		&UserSession{},
 		&AuthFlow{},
 		&ExternalIdentityClaim{},
@@ -297,6 +299,9 @@ func migrateDB() error {
 	if err != nil {
 		return err
 	}
+	if err := InitializeApplicationSchemaDescriptions(); err != nil {
+		return err
+	}
 	if err := InitializeUserAuthVersions(); err != nil {
 		return err
 	}
@@ -327,6 +332,8 @@ func migrateDBFast() error {
 		{&Token{}, "Token"},
 		{&User{}, "User"},
 		{&UserApplication{}, "UserApplication"},
+		{&PasswordResetApplication{}, "PasswordResetApplication"},
+		{&SchemaColumnDescription{}, "SchemaColumnDescription"},
 		{&UserSession{}, "UserSession"},
 		{&AuthFlow{}, "AuthFlow"},
 		{&ExternalIdentityClaim{}, "ExternalIdentityClaim"},
@@ -378,6 +385,9 @@ func migrateDBFast() error {
 		if err != nil {
 			return err
 		}
+	}
+	if err := InitializeApplicationSchemaDescriptions(); err != nil {
+		return err
 	}
 	if err := InitializeUserAuthVersions(); err != nil {
 		return err

@@ -12,6 +12,7 @@ import type {
   UserApplicationDecisionResponse,
   UserApplicationListResponse,
   UserApplicationStatus,
+  PasswordResetApplicationListResponse,
 } from './types'
 
 export async function getUserApplications(params?: {
@@ -37,6 +38,33 @@ export async function reviewUserApplication(
   const res = await api.post(
     `/api/user/applications/${applicationId}/${decision === 'approved' ? 'approve' : 'reject'}`,
     { review_comment: reviewComment }
+  )
+  return res.data
+}
+
+export async function getPasswordResetApplications(params?: {
+  status?: UserApplicationStatus
+  page?: number
+  pageSize?: number
+}): Promise<PasswordResetApplicationListResponse> {
+  const res = await api.get('/api/user/password-reset-applications', {
+    params: {
+      status: params?.status,
+      p: params?.page ?? 1,
+      page_size: params?.pageSize ?? 100,
+    },
+  })
+  return res.data
+}
+
+export async function reviewPasswordResetApplication(
+  applicationId: number,
+  decision: Exclude<UserApplicationStatus, 'pending'>,
+  reviewNote: string
+): Promise<UserApplicationDecisionResponse> {
+  const res = await api.post(
+    `/api/user/password-reset-applications/${applicationId}/${decision === 'approved' ? 'approve' : 'reject'}`,
+    { review_comment: reviewNote }
   )
   return res.data
 }

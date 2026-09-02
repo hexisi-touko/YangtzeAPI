@@ -14,10 +14,15 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-import type { UserApplication, UserApplicationStatus } from '../types'
+import type { UserApplicationStatus } from '../types'
+
+type ReviewApplicant = {
+  id: number
+  username: string
+}
 
 type ReviewDecisionDialogProps = {
-  application: UserApplication | null
+  application: ReviewApplicant | null
   decision: Exclude<UserApplicationStatus, 'pending'> | null
   pending: boolean
   onOpenChange: (open: boolean) => void
