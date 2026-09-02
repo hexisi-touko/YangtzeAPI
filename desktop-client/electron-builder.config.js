@@ -15,6 +15,7 @@ module.exports = {
     'preload.js',
     'user-preload.js',
     'src/**/*.js',
+    'build/icon.ico',
     'desktop.config.json',
     'desktop.config.example.json',
     'ui/*.html',

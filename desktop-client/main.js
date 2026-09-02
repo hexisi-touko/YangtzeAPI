@@ -6,6 +6,7 @@ const { PasswordResetStore } = require('./src/password-reset-store')
 const { CodexConfigError, CodexConfigManager } = require('./src/codex-config-manager')
 
 const desktopConfig = loadDesktopConfig()
+const appIconPath = path.join(__dirname, ...desktopConfig.appIconPath.split('/'))
 const LOGIN_WINDOW_WIDTH = 420
 const LOGIN_WINDOW_HEIGHT = 620
 const USER_SESSION_PARTITION = 'persist:new-api-user'
@@ -133,6 +134,7 @@ async function openUserWindow() {
     autoHideMenuBar: true,
     backgroundColor: '#ffffff',
     title: desktopConfig.productName,
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'user-preload.js'),
       session: apiSession,
@@ -177,6 +179,7 @@ async function createLoginWindow() {
     show: false,
     backgroundColor: '#ffffff',
     title: desktopConfig.productName,
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       session: apiSession,
