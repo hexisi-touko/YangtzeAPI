@@ -8,14 +8,18 @@ the Free Software Foundation, either version 3 of the License, or
 */
 import { useQuery } from '@tanstack/react-query'
 import {
+  CheckCircle2,
   Clipboard,
   ExternalLink,
   KeyRound,
+  Loader2,
   MonitorCog,
+  RefreshCw,
   Server,
+  Settings2,
   ShieldCheck,
 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -37,7 +41,9 @@ import { useAuthStore } from '@/stores/auth-store'
 
 function getStatusLabel(status?: number) {
   if (status === 1) return { label: '已启用', variant: 'default' as const }
-  if (status === 2) return { label: '待管理员处理', variant: 'warning' as const }
+  if (status === 2) {
+    return { label: '待管理员处理', variant: 'warning' as const }
+  }
   return { label: '未知', variant: 'outline' as const }
 }
 
@@ -53,15 +59,61 @@ export function ClientPortal() {
   const status = getStatusLabel(user?.status)
   const apiKeys = data?.data?.items ?? []
   const isAdmin = (user?.role ?? 0) >= ROLE.ADMIN
+  const desktopBridge =
+    typeof window === 'undefined' ? undefined : window.yangtzeDesktop
+  const [clientStatus, setClientStatus] = useState<Awaited<
+    ReturnType<NonNullable<typeof desktopBridge>['getCodexStatus']>
+  > | null>(null)
+  const [clientAction, setClientAction] = useState<
+    'configure' | 'detect' | null
+  >(null)
   const serviceUrl = useMemo(
     () => (typeof window === 'undefined' ? '' : window.location.origin),
     []
   )
+  let clientStatusLabel = t('未检测到桌面客户端')
+  if (desktopBridge) clientStatusLabel = t('尚未完成配置')
+  if (clientStatus?.configured) clientStatusLabel = t('配置正常')
 
   const copyServiceUrl = async () => {
     if (!serviceUrl || !navigator.clipboard) return
     await navigator.clipboard.writeText(serviceUrl)
     toast.success('服务地址已复制')
+  }
+
+  useEffect(() => {
+    if (!desktopBridge) return
+    let active = true
+    void desktopBridge.getCodexStatus().then((result) => {
+      if (active) setClientStatus(result)
+    })
+    return () => {
+      active = false
+    }
+  }, [desktopBridge])
+
+  const runClientAction = async (action: 'configure' | 'detect') => {
+    if (!desktopBridge) {
+      toast.error(t('请在桌面客户端中打开此页面'))
+      return
+    }
+    setClientAction(action)
+    try {
+      const result =
+        action === 'configure'
+          ? await desktopBridge.configureCodex()
+          : await desktopBridge.detectCodex()
+      setClientStatus(result)
+      if (result.success && result.configured) {
+        toast.success(result.message || t('Codex 配置正常'))
+      } else {
+        toast.error(result.message || t('Codex 配置检测未通过'))
+      }
+    } catch {
+      toast.error(t('桌面客户端操作失败，请重新打开客户端'))
+    } finally {
+      setClientAction(null)
+    }
   }
 
   return (
@@ -103,7 +155,9 @@ export function ClientPortal() {
             <Card size='sm'>
               <CardHeader>
                 <CardDescription>调用次数</CardDescription>
-                <CardTitle>{(user?.request_count ?? 0).toLocaleString()}</CardTitle>
+                <CardTitle>
+                  {(user?.request_count ?? 0).toLocaleString()}
+                </CardTitle>
               </CardHeader>
               <CardContent className='text-muted-foreground text-sm'>
                 当前账号累计请求
@@ -122,7 +176,9 @@ export function ClientPortal() {
               </CardHeader>
               <CardContent>
                 <div className='bg-muted flex items-center justify-between gap-3 rounded-md px-3 py-2 font-mono text-sm'>
-                  <span className='min-w-0 truncate'>{serviceUrl || '当前地址不可用'}</span>
+                  <span className='min-w-0 truncate'>
+                    {serviceUrl || '当前地址不可用'}
+                  </span>
                   <Button
                     variant='ghost'
                     size='icon-sm'
@@ -143,12 +199,13 @@ export function ClientPortal() {
                   API Key
                 </CardTitle>
                 <CardDescription>
-                  当前账号已创建 {isLoading ? '...' : apiKeys.length} 个 Key。
+                  {isAdmin ? '当前账号已创建' : '管理员已发放'}{' '}
+                  {isLoading ? '...' : apiKeys.length} 个 Key。
                 </CardDescription>
               </CardHeader>
               <CardContent className='flex flex-wrap gap-2'>
                 <Button size='sm' render={<a href='/keys' />}>
-                  管理我的 Key
+                  {isAdmin ? '管理我的 Key' : '查看我的 Key'}
                   <ExternalLink />
                 </Button>
                 <span className='text-muted-foreground self-center text-xs'>
@@ -160,16 +217,68 @@ export function ClientPortal() {
 
           <Card>
             <CardHeader>
-              <CardTitle>客户端接入状态</CardTitle>
+              <CardTitle className='flex items-center gap-2'>
+                <MonitorCog className='size-4' />
+                {t('Codex 客户端配置')}
+              </CardTitle>
               <CardDescription>
-                EXE 客户端和自动写入 Codex 根目录的功能将在客户端项目接入后启用。
+                {desktopBridge
+                  ? t(
+                      '由桌面客户端安全地配置本机 Codex，现有设置会先备份再更新。'
+                    )
+                  : t('请通过桌面客户端登录后使用配置和检测功能。')}
               </CardDescription>
             </CardHeader>
-            <CardContent className='flex flex-wrap items-center gap-3'>
-              <Button variant='outline' disabled>
-                下载客户端（待接入）
-              </Button>
-              <Badge variant='outline'>前端入口已准备</Badge>
+            <CardContent className='space-y-3'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <Badge
+                  variant={clientStatus?.configured ? 'default' : 'outline'}
+                >
+                  {clientStatusLabel}
+                </Badge>
+                {clientStatus?.serviceReachable === true && (
+                  <Badge variant='outline'>
+                    <CheckCircle2 />
+                    {t('API 连接正常')}
+                  </Badge>
+                )}
+                {clientStatus?.codexHome && (
+                  <span className='text-muted-foreground text-xs'>
+                    {t('配置目录：{{path}}', { path: clientStatus.codexHome })}
+                  </span>
+                )}
+              </div>
+              <div className='flex flex-wrap items-center gap-2'>
+                <Button
+                  size='sm'
+                  onClick={() => void runClientAction('configure')}
+                  disabled={!desktopBridge || clientAction !== null}
+                >
+                  {clientAction === 'configure' ? (
+                    <Loader2 className='animate-spin' />
+                  ) : (
+                    <Settings2 />
+                  )}
+                  {t('配置 Codex')}
+                </Button>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() => void runClientAction('detect')}
+                  disabled={!desktopBridge || clientAction !== null}
+                >
+                  {clientAction === 'detect' ? (
+                    <Loader2 className='animate-spin' />
+                  ) : (
+                    <RefreshCw />
+                  )}
+                  {t('重新检测')}
+                </Button>
+                <span className='text-muted-foreground text-xs'>
+                  {clientStatus?.message ||
+                    t('配置时会使用管理员审核后发放的唯一 API Key')}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
@@ -178,7 +287,8 @@ export function ClientPortal() {
               <ShieldCheck />
               <AlertTitle>管理员预览提示</AlertTitle>
               <AlertDescription>
-                你当前登录的是管理员账号，因此仍能看到管理员菜单。普通成员登录后只会看到成员入口、Key 管理、用量记录和个人资料。
+                你当前登录的是管理员账号，因此仍能看到管理员菜单。普通成员登录后只会看到成员入口、Key
+                管理、用量记录和个人资料。
               </AlertDescription>
             </Alert>
           )}

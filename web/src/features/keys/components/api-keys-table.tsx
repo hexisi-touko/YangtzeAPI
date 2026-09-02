@@ -96,9 +96,11 @@ function ApiKeysMobileSkeleton() {
 function ApiKeysMobileList({
   table,
   isLoading,
+  readOnly,
 }: {
   table: TanstackTable<ApiKey>
   isLoading: boolean
+  readOnly: boolean
 }) {
   const { t } = useTranslation()
   const rows = table.getRowModel().rows
@@ -162,7 +164,7 @@ function ApiKeysMobileList({
               <div className='min-w-0 flex-1 [&_button:first-child]:max-w-full [&_button:first-child]:truncate [&_button:first-child]:px-0'>
                 <ApiKeyCell apiKey={apiKey} />
               </div>
-              <DataTableRowActions row={row} />
+              {!readOnly && <DataTableRowActions row={row} />}
             </div>
 
             <div className='flex items-center justify-between gap-2 text-xs'>
@@ -186,11 +188,11 @@ function ApiKeysMobileList({
   )
 }
 
-export function ApiKeysTable() {
+export function ApiKeysTable({ readOnly = false }: { readOnly?: boolean }) {
   const { t } = useTranslation()
   const { refreshTrigger } = useApiKeys()
   const [now, setNow] = useState(() => Date.now())
-  const columns = useApiKeysColumns(now)
+  const columns = useApiKeysColumns(now, readOnly)
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -279,7 +281,7 @@ export function ApiKeysTable() {
   const { table } = useDataTable({
     data: apiKeys,
     columns,
-    enableRowSelection: true,
+    enableRowSelection: !readOnly,
     columnFilters,
     columnVisibilityStorageKey: API_KEYS_COLUMN_VISIBILITY_STORAGE_KEY,
     globalFilter,
@@ -326,11 +328,19 @@ export function ApiKeysTable() {
           },
         ],
       }}
-      mobile={<ApiKeysMobileList table={table} isLoading={isLoading} />}
+      mobile={
+        <ApiKeysMobileList
+          table={table}
+          isLoading={isLoading}
+          readOnly={readOnly}
+        />
+      }
       getRowClassName={(row) =>
         isDisabledApiKeyRow(row.original) ? DISABLED_ROW_DESKTOP : undefined
       }
-      bulkActions={<DataTableBulkActions table={table} />}
+      bulkActions={
+        readOnly ? undefined : <DataTableBulkActions table={table} />
+      }
     />
   )
 }

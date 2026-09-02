@@ -22,7 +22,9 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { getCookie } from '@/lib/cookies'
+import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth-store'
 
 import { AppHeader } from './app-header'
 import { AppSidebar } from './app-sidebar'
@@ -33,13 +35,21 @@ type AuthenticatedLayoutProps = {
 
 export function AuthenticatedLayout(props: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
+  const role = useAuthStore((state) => state.auth.user?.role)
+  const isMember = role === ROLE.USER
 
   return (
     <LayoutProvider>
       <SearchProvider>
         <SidebarProvider defaultOpen={defaultOpen} className='flex-col'>
           <SkipToMain />
-          <AppHeader />
+          <AppHeader
+            showTopNav={!isMember}
+            showSearch={!isMember}
+            showNotifications={!isMember}
+            showConfigDrawer={!isMember}
+            showLanguageSwitcher={!isMember}
+          />
           <div className='flex min-h-0 w-full flex-1'>
             <AppSidebar />
             <SidebarInset
