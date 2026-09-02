@@ -36,10 +36,16 @@ export interface TwoFAPayload {
 export interface RegisterPayload {
   username: string
   password: string
+  application_reason: string
   email?: string
   verification_code?: string
   aff_code?: string
   turnstile?: string
+}
+
+export interface RegistrationApplication {
+  application_id: number
+  application_status: 'pending'
 }
 
 export interface PasswordResetPayload {

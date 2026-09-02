@@ -983,8 +983,10 @@ func deleteUserAuthenticationData(tx *gorm.DB, userId int) error {
 	return deleteUserOAuthBindingsByUserId(tx, userId)
 }
 
-// ValidateAndFill check password & user status
-func (user *User) ValidateAndFill() (err error) {
+// ValidateCredentialsAndFill verifies password credentials without requiring
+// the account to be enabled. Application status checks use this path so a
+// pending applicant can authenticate only to read their own review result.
+func (user *User) ValidateCredentialsAndFill() (err error) {
 	// When querying with struct, GORM will only query with non-zero fields,
 	// that means if your field's value is 0, '', false or other zero values,
 	// it won't be used to build query conditions
@@ -1005,8 +1007,19 @@ func (user *User) ValidateAndFill() (err error) {
 		return ErrInvalidCredentials
 	}
 	okay := common.ValidatePasswordAndHash(password, user.Password)
-	if !okay || user.Status != common.UserStatusEnabled {
+	if !okay {
 		return ErrInvalidCredentials
+	}
+	return nil
+}
+
+// ValidateAndFill checks password credentials and user status for login.
+func (user *User) ValidateAndFill() error {
+	if err := user.ValidateCredentialsAndFill(); err != nil {
+		return err
+	}
+	if user.Status != common.UserStatusEnabled {
+		return ErrUserDisabled
 	}
 	return nil
 }

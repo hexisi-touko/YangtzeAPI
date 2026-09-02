@@ -2,18 +2,24 @@
 Copyright (C) 2023-2026 QuantumNous
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
 */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, RefreshCw, UserCheck, UserX } from 'lucide-react'
-import { useMemo } from 'react'
+import {
+  CheckCircle2,
+  Clock3,
+  RefreshCw,
+  UserCheck,
+  UserX,
+  XCircle,
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { SectionPageLayout } from '@/components/layout'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,23 +37,39 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { getUsers, manageUser } from '@/features/users/api'
-import { USER_STATUS } from '@/features/users/constants'
-import type { User } from '@/features/users/types'
-import { formatQuota, formatTimestamp } from '@/lib/format'
+import { formatTimestamp } from '@/lib/format'
 
-function isMember(user: User) {
-  return user.role === 1 && user.DeletedAt == null
-}
+import { getUserApplications, reviewUserApplication } from './api'
+import { ReviewDecisionDialog } from './components/review-decision-dialog'
+import type { UserApplication, UserApplicationStatus } from './types'
 
-function ReviewStatus({ user }: { user: User }) {
-  if (user.status === USER_STATUS.DISABLED) {
-    return <Badge variant='warning'>待审核候选</Badge>
+type StatusFilter = 'all' | UserApplicationStatus
+type Decision = Exclude<UserApplicationStatus, 'pending'>
+
+const EMPTY_APPLICATIONS: UserApplication[] = []
+
+function ApplicationStatusBadge(props: { status: UserApplicationStatus }) {
+  const { t } = useTranslation()
+  if (props.status === 'approved') {
+    return (
+      <Badge variant='default'>
+        <CheckCircle2 />
+        {t('Approved')}
+      </Badge>
+    )
+  }
+  if (props.status === 'rejected') {
+    return (
+      <Badge variant='destructive'>
+        <XCircle />
+        {t('Rejected')}
+      </Badge>
+    )
   }
   return (
-    <Badge variant='default'>
-      <CheckCircle2 />
-      已启用
+    <Badge variant='warning'>
+      <Clock3 />
+      {t('Pending review')}
     </Badge>
   )
 }
@@ -55,160 +77,286 @@ function ReviewStatus({ user }: { user: User }) {
 export function MemberReview() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const { data, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['member-review-users'],
-    queryFn: () => getUsers({ p: 1, page_size: 100, sort_by: 'created_at', sort_order: 'desc' }),
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending')
+  const [selectedApplication, setSelectedApplication] =
+    useState<UserApplication | null>(null)
+  const [decision, setDecision] = useState<Decision | null>(null)
+
+  const applicationsQuery = useQuery({
+    queryKey: ['member-applications'],
+    queryFn: () => getUserApplications({ pageSize: 100 }),
   })
   const reviewMutation = useMutation({
-    mutationFn: ({ id, action }: { id: number; action: 'enable' | 'disable' }) =>
-      manageUser(id, action),
+    mutationFn: (variables: {
+      applicationId: number
+      decision: Decision
+      reviewComment: string
+    }) =>
+      reviewUserApplication(
+        variables.applicationId,
+        variables.decision,
+        variables.reviewComment
+      ),
     onSuccess: (result) => {
       if (!result.success) {
-        toast.error(result.message || '操作失败')
+        toast.error(result.message || t('Failed to review application'))
         return
       }
-      toast.success('账号状态已更新')
-      void queryClient.invalidateQueries({ queryKey: ['member-review-users'] })
+      toast.success(result.message || t('Application review completed'))
+      setSelectedApplication(null)
+      setDecision(null)
+      void queryClient.invalidateQueries({ queryKey: ['member-applications'] })
       void queryClient.invalidateQueries({ queryKey: ['users'] })
     },
-    onError: () => toast.error('操作失败，请稍后重试'),
+    onError: () => toast.error(t('Failed to review application')),
   })
 
-  const members = useMemo(
-    () => (data?.data?.items ?? []).filter(isMember),
-    [data?.data?.items]
+  const applications = applicationsQuery.data?.data?.items ?? EMPTY_APPLICATIONS
+  const counts = useMemo(
+    () => ({
+      all: applications.length,
+      pending: applications.filter((item) => item.status === 'pending').length,
+      approved: applications.filter((item) => item.status === 'approved')
+        .length,
+      rejected: applications.filter((item) => item.status === 'rejected')
+        .length,
+    }),
+    [applications]
   )
-  const pendingMembers = members.filter(
-    (user) => user.status === USER_STATUS.DISABLED
+  const filteredApplications = useMemo(
+    () =>
+      statusFilter === 'all'
+        ? applications
+        : applications.filter((item) => item.status === statusFilter),
+    [applications, statusFilter]
   )
 
-  const handleAction = (user: User, action: 'enable' | 'disable') => {
-    reviewMutation.mutate({ id: user.id, action })
+  const openDecision = (
+    application: UserApplication,
+    nextDecision: Decision
+  ) => {
+    setSelectedApplication(application)
+    setDecision(nextDecision)
   }
+
+  const closeDecision = (open: boolean) => {
+    if (!open && !reviewMutation.isPending) {
+      setSelectedApplication(null)
+      setDecision(null)
+    }
+  }
+
+  const submitDecision = (reviewComment: string) => {
+    if (!selectedApplication || !decision) return
+    reviewMutation.mutate({
+      applicationId: selectedApplication.id,
+      decision,
+      reviewComment,
+    })
+  }
+
+  const filters: Array<{ value: StatusFilter; label: string }> = [
+    { value: 'pending', label: t('Pending') },
+    { value: 'approved', label: t('Approved') },
+    { value: 'rejected', label: t('Rejected') },
+    { value: 'all', label: t('All') },
+  ]
 
   return (
     <SectionPageLayout>
-      <SectionPageLayout.Title>{t('审核管理')}</SectionPageLayout.Title>
+      <SectionPageLayout.Title>
+        {t('Application review')}
+      </SectionPageLayout.Title>
       <SectionPageLayout.Content>
         <div className='space-y-4'>
-          <Alert>
-            <Clock3 />
-            <AlertTitle>当前为前端审核工作台</AlertTitle>
-            <AlertDescription>
-              后端目前只有“启用/禁用”状态，没有独立的待审核字段。因此本页暂时把禁用的普通成员作为审核候选；正式审核状态和审核记录需要后端接口配合。
-            </AlertDescription>
-          </Alert>
-
-          <div className='grid gap-4 sm:grid-cols-3'>
+          <div className='grid gap-3 sm:grid-cols-3'>
             <Card size='sm'>
               <CardHeader>
-                <CardDescription>成员总数</CardDescription>
-                <CardTitle>{members.length}</CardTitle>
+                <CardDescription>{t('Pending applications')}</CardDescription>
+                <CardTitle>{counts.pending}</CardTitle>
               </CardHeader>
             </Card>
             <Card size='sm'>
               <CardHeader>
-                <CardDescription>审核候选</CardDescription>
-                <CardTitle className='text-warning'>{pendingMembers.length}</CardTitle>
+                <CardDescription>{t('Approved applications')}</CardDescription>
+                <CardTitle>{counts.approved}</CardTitle>
               </CardHeader>
             </Card>
             <Card size='sm'>
               <CardHeader>
-                <CardDescription>Key 发放</CardDescription>
-                <CardTitle className='text-muted-foreground text-base'>后端待接入</CardTitle>
+                <CardDescription>{t('Rejected applications')}</CardDescription>
+                <CardTitle>{counts.rejected}</CardTitle>
               </CardHeader>
             </Card>
           </div>
 
           <Card>
-            <CardHeader className='flex-row items-center justify-between gap-3'>
+            <CardHeader className='gap-3 lg:flex-row lg:items-center lg:justify-between'>
               <div>
-                <CardTitle>组内成员</CardTitle>
-                <CardDescription>审核通过后可由管理员启用账号。</CardDescription>
+                <CardTitle>{t('Member applications')}</CardTitle>
+                <CardDescription>
+                  {t(
+                    'Approving an application enables the account and issues one API key.'
+                  )}
+                </CardDescription>
               </div>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={() => void refetch()}
-                disabled={isFetching}
-                aria-label='刷新成员列表'
-              >
-                <RefreshCw className={isFetching ? 'animate-spin' : undefined} />
-                刷新
-              </Button>
+              <div className='flex flex-wrap items-center gap-2'>
+                <div
+                  className='bg-muted flex rounded-lg p-1'
+                  role='group'
+                  aria-label={t('Filter applications by status')}
+                >
+                  {filters.map((filter) => (
+                    <Button
+                      key={filter.value}
+                      type='button'
+                      size='sm'
+                      variant={
+                        statusFilter === filter.value ? 'default' : 'ghost'
+                      }
+                      onClick={() => setStatusFilter(filter.value)}
+                    >
+                      {filter.label} ({counts[filter.value]})
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant='outline'
+                  size='icon-sm'
+                  onClick={() => void applicationsQuery.refetch()}
+                  disabled={applicationsQuery.isFetching}
+                  aria-label={t('Refresh applications')}
+                  title={t('Refresh applications')}
+                >
+                  <RefreshCw
+                    className={
+                      applicationsQuery.isFetching ? 'animate-spin' : undefined
+                    }
+                  />
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className='text-muted-foreground py-8 text-center text-sm'>正在加载成员...</div>
-              ) : members.length === 0 ? (
-                <div className='text-muted-foreground py-8 text-center text-sm'>暂无普通成员</div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>成员</TableHead>
-                      <TableHead>状态</TableHead>
-                      <TableHead>分组</TableHead>
-                      <TableHead>额度</TableHead>
-                      <TableHead>注册时间</TableHead>
-                      <TableHead className='text-right'>操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {members.map((user) => {
-                      const disabled = user.status === USER_STATUS.DISABLED
-                      return (
-                        <TableRow key={user.id}>
+            <CardContent className='overflow-x-auto'>
+              {applicationsQuery.isLoading && (
+                <div className='text-muted-foreground py-10 text-center text-sm'>
+                  {t('Loading applications...')}
+                </div>
+              )}
+              {!applicationsQuery.isLoading &&
+                filteredApplications.length === 0 && (
+                  <div className='text-muted-foreground py-10 text-center text-sm'>
+                    {t('No applications in this status')}
+                  </div>
+                )}
+              {!applicationsQuery.isLoading &&
+                filteredApplications.length > 0 && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('Member')}</TableHead>
+                        <TableHead>{t('Application reason')}</TableHead>
+                        <TableHead>{t('Status')}</TableHead>
+                        <TableHead>{t('Submitted at')}</TableHead>
+                        <TableHead>{t('Review result')}</TableHead>
+                        <TableHead className='text-right'>
+                          {t('Actions')}
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredApplications.map((application) => (
+                        <TableRow key={application.id}>
                           <TableCell>
-                            <div className='flex min-w-32 items-center gap-2'>
+                            <div className='flex min-w-40 items-center gap-2'>
                               <UserCheck className='text-muted-foreground size-4' />
                               <div className='min-w-0'>
                                 <div className='truncate font-medium'>
-                                  {user.display_name || user.username}
+                                  {application.display_name ||
+                                    application.username}
                                 </div>
                                 <div className='text-muted-foreground truncate text-xs'>
-                                  @{user.username}
+                                  @{application.username}
+                                  {application.email
+                                    ? ` · ${application.email}`
+                                    : ''}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell><ReviewStatus user={user} /></TableCell>
-                          <TableCell>{user.group || '-'}</TableCell>
-                          <TableCell>{formatQuota(user.quota)}</TableCell>
-                          <TableCell>{formatTimestamp(user.created_at ?? 0)}</TableCell>
                           <TableCell>
-                            <div className='flex justify-end gap-2'>
-                              {disabled ? (
+                            <p className='max-w-md min-w-56 whitespace-pre-wrap'>
+                              {application.reason}
+                            </p>
+                          </TableCell>
+                          <TableCell>
+                            <ApplicationStatusBadge
+                              status={application.status}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {formatTimestamp(application.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            {application.status === 'pending' ? (
+                              <span className='text-muted-foreground'>-</span>
+                            ) : (
+                              <div className='max-w-64 space-y-1'>
+                                <div className='text-xs font-medium'>
+                                  {application.reviewer_username ||
+                                    t('Administrator')}
+                                </div>
+                                <div className='text-muted-foreground text-xs whitespace-pre-wrap'>
+                                  {application.review_comment ||
+                                    t('No review comment')}
+                                </div>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {application.status === 'pending' ? (
+                              <div className='flex justify-end gap-2'>
                                 <Button
                                   size='sm'
-                                  onClick={() => handleAction(user, 'enable')}
-                                  disabled={reviewMutation.isPending}
+                                  onClick={() =>
+                                    openDecision(application, 'approved')
+                                  }
                                 >
                                   <CheckCircle2 />
-                                  通过
+                                  {t('Approve')}
                                 </Button>
-                              ) : (
                                 <Button
                                   variant='destructive'
                                   size='sm'
-                                  onClick={() => handleAction(user, 'disable')}
-                                  disabled={reviewMutation.isPending}
+                                  onClick={() =>
+                                    openDecision(application, 'rejected')
+                                  }
                                 >
                                   <UserX />
-                                  停用
+                                  {t('Reject')}
                                 </Button>
-                              )}
-                            </div>
+                              </div>
+                            ) : (
+                              <div className='text-muted-foreground text-right text-xs'>
+                                {formatTimestamp(application.reviewed_at)}
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              )}
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
             </CardContent>
           </Card>
         </div>
+
+        <ReviewDecisionDialog
+          application={selectedApplication}
+          decision={decision}
+          pending={reviewMutation.isPending}
+          onOpenChange={closeDecision}
+          onSubmit={submitDecision}
+        />
       </SectionPageLayout.Content>
     </SectionPageLayout>
   )

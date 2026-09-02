@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { register, wechatLoginByCode } from '@/features/auth/api'
 import { LegalConsent } from '@/features/auth/components/legal-consent'
 import { OAuthProviders } from '@/features/auth/components/oauth-providers'
@@ -92,6 +93,7 @@ export function SignUpForm({
     defaultValues: {
       username: '',
       email: '',
+      applicationReason: '',
       password: '',
       confirmPassword: '',
     },
@@ -163,6 +165,7 @@ export function SignUpForm({
       const res = await register({
         username: data.username,
         password: data.password,
+        application_reason: data.applicationReason,
         email: data.email || undefined,
         verification_code: verificationCode || undefined,
         aff_code: getAffiliateCode(),
@@ -170,7 +173,9 @@ export function SignUpForm({
       })
 
       if (res?.success) {
-        toast.success(t('Account created! Please sign in'))
+        toast.success(
+          t('Application submitted. Please wait for administrator review.')
+        )
         redirectToLogin()
       } else {
         toast.error(res?.message || t('Failed to create account'))
@@ -289,6 +294,27 @@ export function SignUpForm({
               <FormLabel>{t('Confirm password')}</FormLabel>
               <FormControl>
                 <PasswordInput placeholder={t('Confirm password')} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name='applicationReason'
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('Application reason')}</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder={t(
+                    'Describe your project role and how you plan to use the API'
+                  )}
+                  maxLength={500}
+                  rows={4}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

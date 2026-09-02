@@ -262,6 +262,10 @@ func GetTokenUsage(c *gin.Context) {
 }
 
 func AddToken(c *gin.Context) {
+	if c.GetInt("role") == common.RoleCommonUser {
+		common.ApiErrorI18n(c, i18n.MsgTokenAdminIssuedOnly)
+		return
+	}
 	request := tokenRequest{}
 	err := c.ShouldBindJSON(&request)
 	if err != nil {

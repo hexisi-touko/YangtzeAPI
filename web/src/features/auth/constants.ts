@@ -31,6 +31,11 @@ export const registerFormSchema = z
   .object({
     username: z.string().min(1, 'Please enter your username'),
     email: z.string().optional(),
+    applicationReason: z
+      .string()
+      .trim()
+      .min(10, 'Application reason must contain at least 10 characters')
+      .max(500, 'Application reason must contain at most 500 characters'),
     password: z
       .string()
       .min(1, 'Please enter your password')
