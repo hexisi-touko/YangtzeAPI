@@ -1,0 +1,18 @@
+{
+  "productName": "长大计科智慧油田",
+  "artifactBaseName": "API-Client",
+  "logoPath": "ui/assets/logo.svg",
+  "appIconPath": "build/icon.ico",
+  "serverUrl": "https://api.example.com",
+  "userPagePath": "/dashboard",
+  "allowInsecureHttp": false,
+  "apiPaths": {
+    "status": "/api/status",
+    "login": "/api/user/login",
+    "login2fa": "/api/user/login/2fa",
+    "registrationApplication": "/api/user/registration-applications",
+    "passwordResetApplication": "/api/user/password-reset-applications",
+    "passwordResetStatus": "/api/user/password-reset-applications/status",
+    "passwordResetComplete": "/api/user/password-reset-applications/complete"
+  }
+}

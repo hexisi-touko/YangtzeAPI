@@ -1,0 +1,125 @@
+/*
+ * 登录窗口全部视觉样式都集中在本文件。
+ * 后续改颜色优先修改 :root；Logo 图片固定放在 assets/logo.svg 或 assets/logo.png；改表单间距修改 .field。
+ */
+:root {
+  font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  color: #172033;
+  background: #ffffff;
+  --brand: #1769e0;
+  --brand-hover: #0f5fce;
+  --border: #d8dee8;
+  --muted: #737d8d;
+  --danger: #bf3039;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; min-width: 380px; min-height: 100vh; overflow-x: hidden; background: #fff; }
+button, input, textarea { font: inherit; letter-spacing: 0; }
+button { cursor: pointer; }
+
+/* 无边框窗口标题栏 */
+.titlebar {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 15px;
+  color: #596477;
+  background: #fff;
+  border-bottom: 1px solid #e8ebf0;
+  font-size: 12px;
+  font-weight: 600;
+  -webkit-app-region: drag;
+}
+.window-buttons { height: 100%; display: flex; -webkit-app-region: no-drag; }
+.register-view-active .titlebar { -webkit-app-region: no-drag; }
+.register-view-active .brand-area { height: 122px; padding-top: 7px; }
+.register-view-active .brand-logo { width: 60px; height: 60px; margin-bottom: 3px; }
+.register-view-active .brand-area h1 { font-size: 18px; }
+.register-view-active .brand-area p { margin-top: 1px; }
+.register-view-active .form-area { padding-top: 10px; padding-bottom: 14px; }
+.register-view-active h2 { margin-bottom: 12px; }
+.register-view-active .back-button { margin-bottom: 8px; }
+.register-view-active .field { margin-bottom: 8px; }
+.register-view-active .field span { margin-bottom: 4px; }
+.register-view-active .field textarea { height: 58px; min-height: 58px; max-height: 58px; }
+.window-buttons button { width: 46px; height: 100%; border: 0; color: #596477; background: transparent; font-size: 18px; }
+.window-buttons button:hover { background: #eef1f5; }
+.window-buttons .close-button:hover { color: #fff; background: #d9363e; }
+
+/* 居中品牌区。Logo 槽使用 contain，横版、方形和透明底图片都不会被裁切。 */
+.brand-area { height: 188px; padding-top: 22px; text-align: center; background: #f3f7fd; border-bottom: 1px solid #e3e9f2; }
+.brand-logo {
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  box-shadow: none;
+}
+.brand-logo img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  object-fit: contain;
+}
+.brand-logo span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--brand);
+  font-size: 34px;
+  font-weight: 700;
+}
+.brand-logo.has-image img { display: block; }
+.brand-logo.has-image span { display: none; }
+.brand-area h1 { margin: 0; font-size: 20px; font-weight: 650; }
+.brand-area p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+
+.form-area { width: min(100% - 60px, 340px); margin: 0 auto; padding: 24px 0 30px; }
+.auth-view { display: none; }
+.auth-view.active { display: block; }
+h2 { margin: 0 0 18px; font-size: 18px; font-weight: 650; }
+.field { display: block; margin-bottom: 13px; }
+.field span { display: block; margin-bottom: 6px; color: #596477; font-size: 12px; font-weight: 600; }
+.field input { width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--border); border-radius: 5px; outline: none; color: #172033; background: #fff; }
+.field textarea { width: 100%; height: 70px; min-height: 70px; max-height: 70px; padding: 10px 12px; resize: none; border: 1px solid var(--border); border-radius: 5px; outline: none; color: #172033; background: #fff; line-height: 1.5; }
+.field input:focus, .field textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(23, 105, 224, .1); }
+.field input::placeholder, .field textarea::placeholder { color: #a4adbb; }
+.form-options { display: flex; align-items: center; justify-content: space-between; margin: 1px 0 17px; }
+.checkbox { color: #667185; font-size: 12px; }
+.checkbox input { accent-color: var(--brand); vertical-align: -2px; }
+.primary-button { width: 100%; height: 42px; border: 0; border-radius: 5px; color: #fff; background: var(--brand); font-weight: 650; }
+.primary-button:hover { background: var(--brand-hover); }
+.primary-button:disabled { cursor: wait; opacity: .62; }
+.text-button, .back-button { border: 0; padding: 0; color: var(--brand); background: transparent; font-size: 12px; }
+.text-button:hover, .back-button:hover { text-decoration: underline; }
+.back-button { margin-bottom: 13px; color: #667185; }
+.switch-line { margin: 18px 0 0; text-align: center; color: var(--muted); font-size: 12px; }
+.view-description { margin: -8px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.view-description strong { color: #3d485b; font-weight: 650; overflow-wrap: anywhere; }
+.form-message { display: none; margin: 0 0 15px; padding: 9px 11px; border-radius: 5px; font-size: 12px; line-height: 1.5; }
+.form-message.visible { display: block; }
+.form-message.info { color: #315b92; background: #eef5ff; border: 1px solid #cbddf7; }
+.form-message.success { color: #17633d; background: #edf8f1; border: 1px solid #c6e6d1; }
+.form-message.error { color: var(--danger); background: #fff0f1; border: 1px solid #f2c9cd; }
+
+/* 注册页内容较长时允许纵向滚动，最小窗口尺寸也不会遮挡按钮。 */
+@media (max-height: 680px) {
+  .brand-area { height: 144px; padding-top: 10px; }
+  .brand-logo { width: 72px; height: 72px; margin-bottom: 4px; }
+  .brand-logo span { font-size: 30px; }
+  .brand-area h1 { font-size: 19px; }
+  .brand-area p { margin-top: 2px; }
+  .form-area { padding: 14px 0 20px; }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "api-relay-desktop-client",
+  "version": "1.0.0",
+  "private": true,
+  "author": "API Relay Operator",
+  "description": "Configurable Windows desktop client for New API authentication and registration review",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check electron-builder.config.js && node --check src/config.js && node --check src/new-api-client.js && node --check src/password-reset-store.js && node --check scripts/generate-icon.js && node --check ui/login.js",
+    "test": "node --test test/*.test.js",
+    "visual:check": "electron scripts/visual-check.js",
+    "icon:generate": "electron scripts/generate-icon.js",
+    "predist:win": "npm run icon:generate",
+    "dist:win": "electron-builder --config electron-builder.config.js --win",
+    "release:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-local.ps1"
+  },
+  "devDependencies": {
+    "electron": "44.1.0",
+    "electron-builder": "26.15.3"
+  }
+}

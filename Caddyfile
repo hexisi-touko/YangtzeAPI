@@ -1,0 +1,10 @@
+{
+    email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+    reverse_proxy new-api:3000 {
+        # Preserve SSE streaming responses instead of buffering them.
+        flush_interval -1
+    }
+}

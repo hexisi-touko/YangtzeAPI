@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- CSP 禁止页面加载外部脚本，避免以后 UI 改动时意外引入不受信任代码。 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>桌面客户端 - 登录</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <!-- 自定义标题栏：登录页可拖动，注册页切换为固定不可拖动。 -->
+  <header class="titlebar">
+    <span data-product-name>桌面客户端</span>
+    <div class="window-buttons">
+      <button id="minimize-button" type="button" title="最小化" aria-label="最小化">−</button>
+      <button id="close-button" class="close-button" type="button" title="关闭" aria-label="关闭">×</button>
+    </div>
+  </header>
+
+  <!-- 品牌区：把 logo.svg 或 logo.png 放到 assets，重新构建后会自动替换占位字。 -->
+  <section class="brand-area">
+    <div class="brand-logo" id="brand-logo">
+      <img id="brand-logo-image" alt="客户端 Logo">
+      <span id="brand-logo-fallback" aria-hidden="true">智</span>
+    </div>
+    <h1 data-product-name>桌面客户端</h1>
+    <p>桌面客户端</p>
+  </section>
+
+  <main class="form-area">
+    <div id="form-message" class="form-message" role="status" aria-live="polite"></div>
+
+    <!-- 登录页面 -->
+    <section id="login-view" class="auth-view active" aria-labelledby="login-title">
+      <h2 id="login-title">账号登录</h2>
+      <form id="login-form">
+        <label class="field">
+          <span>账号</span>
+          <input id="login-username" autocomplete="username" required placeholder="手机号 / 邮箱 / 用户名">
+        </label>
+        <label class="field">
+          <span>密码</span>
+          <input id="login-password" type="password" autocomplete="current-password" required placeholder="请输入密码">
+        </label>
+        <div class="form-options">
+          <label class="checkbox"><input id="remember-username" type="checkbox" checked> 记住账号</label>
+          <button id="password-reset-button" class="text-button" type="button" data-view="forgot-view">忘记密码</button>
+        </div>
+        <button class="primary-button" type="submit">登录</button>
+      </form>
+      <p class="switch-line">还没有账号？<button class="text-button" type="button" data-view="register-view">注册账号</button></p>
+    </section>
+
+    <!-- 注册页面：提交到配置的注册申请接口，由 New API Web 管理端审核。 -->
+    <section id="register-view" class="auth-view" aria-labelledby="register-title">
+      <button class="back-button" type="button" data-view="login-view">← 返回登录</button>
+      <h2 id="register-title">注册账号</h2>
+      <form id="register-form">
+        <label class="field"><span>用户名</span><input id="register-username" autocomplete="username" minlength="3" maxlength="20" required placeholder="3-20 个字符"></label>
+        <label class="field"><span>密码</span><input id="register-password" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="8-20 个字符"></label>
+        <label class="field"><span>确认密码</span><input id="register-confirm" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="再次输入密码"></label>
+        <label class="field"><span>申请理由</span><textarea id="register-reason" minlength="5" maxlength="300" required placeholder="请简要说明账号用途"></textarea></label>
+        <button class="primary-button" type="submit">提交申请</button>
+      </form>
+    </section>
+
+    <!-- 两步验证流程令牌只保存在主进程，本页面只提交一次性验证码。 -->
+    <section id="two-factor-view" class="auth-view" aria-labelledby="two-factor-title">
+      <button class="back-button" type="button" data-view="login-view">← 返回登录</button>
+      <h2 id="two-factor-title">两步验证</h2>
+      <p class="view-description">请输入身份验证器生成的一次性验证码。</p>
+      <form id="two-factor-form">
+        <label class="field"><span>验证码</span><input id="two-factor-code" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="8" required placeholder="请输入验证码"></label>
+        <button class="primary-button" type="submit">验证并登录</button>
+      </form>
+    </section>
+
+    <!-- 找回密码分两步：先提交人工审核申请，通过后才能设置新密码。 -->
+    <section id="forgot-view" class="auth-view" aria-labelledby="forgot-title">
+      <button class="back-button" type="button" data-view="login-view">← 返回登录</button>
+      <h2 id="forgot-title">找回密码</h2>
+      <div id="forgot-application-stage">
+        <p class="view-description">提交后由管理员根据申请理由进行审核。</p>
+        <form id="forgot-form">
+          <label class="field"><span>用户名</span><input id="forgot-username" autocomplete="username" minlength="3" maxlength="20" required placeholder="请输入需要找回的用户名"></label>
+          <label class="field"><span>申请理由</span><textarea id="forgot-reason" minlength="5" maxlength="300" required placeholder="请说明无法登录的情况"></textarea></label>
+          <button class="primary-button" type="submit">提交找回申请</button>
+        </form>
+      </div>
+      <div id="forgot-status-stage" hidden>
+        <p class="view-description">账号 <strong id="forgot-status-username"></strong> 的申请已提交。管理员通过后，才能设置新密码。</p>
+        <button id="forgot-status-button" class="primary-button" type="button">查询审核状态</button>
+      </div>
+      <div id="forgot-reset-stage" hidden>
+        <p class="view-description">申请已通过，请设置新的登录密码。</p>
+        <form id="password-reset-complete-form">
+          <label class="field"><span>重置密码</span><input id="reset-new-password" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="8-20 个字符"></label>
+          <label class="field"><span>再次确认重置密码</span><input id="reset-confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="20" required placeholder="再次输入新密码"></label>
+          <button class="primary-button" type="submit">确认重置</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="login.js"></script>
+</body>
+</html>
