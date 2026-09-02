@@ -36,6 +36,7 @@ type RegisterRequest struct {
 	VerificationCode  string `json:"verification_code"`
 	AffCode           string `json:"aff_code"`
 	ApplicationReason string `json:"application_reason"`
+	Reason            string `json:"reason"`
 }
 
 var (
@@ -273,7 +274,11 @@ func Register(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgUserExists)
 		return
 	}
-	reason, err := normalizeApplicationReason(request.ApplicationReason)
+	applicationReason := request.ApplicationReason
+	if strings.TrimSpace(applicationReason) == "" {
+		applicationReason = request.Reason
+	}
+	reason, err := normalizeApplicationReason(applicationReason)
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgUserApplicationReasonInvalid)
 		return

@@ -18,6 +18,8 @@ POST /api/user/register
 Content-Type: application/json
 ```
 
+桌面客户端也可以调用兼容路径 `POST /api/user/registration-applications`。
+
 ```json
 {
   "username": "member01",
@@ -29,6 +31,8 @@ Content-Type: application/json
 ```
 
 `application_reason` 必填，去掉首尾空格后必须为 10 至 500 个字符。注册成功后账号初始状态为禁用，此时不会生成 Key。
+
+兼容路径同时接受客户端契约中的 `reason` 字段；如果两个字段同时存在，以 `application_reason` 为准。
 
 成功响应：
 
