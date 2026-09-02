@@ -10,6 +10,14 @@ const authAdapter = {
     if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
     return window.desktopAuth.getStatus()
   },
+  async getRememberedCredentials() {
+    if (!window.desktopAuth) return { success: true, credentials: null, encryptionAvailable: false }
+    return window.desktopAuth.getRememberedCredentials()
+  },
+  async clearRememberedCredentials() {
+    if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
+    return window.desktopAuth.clearRememberedCredentials()
+  },
   async login(payload) {
     if (!window.desktopAuth) return { success: false, message: '认证桥接不可用' }
     return window.desktopAuth.login(payload)
@@ -137,19 +145,44 @@ document.querySelectorAll('[data-view]').forEach((button) => {
   button.addEventListener('click', () => showView(button.dataset.view))
 })
 
-const rememberedUsername = localStorage.getItem('rememberedUsername') || ''
-document.querySelector('#login-username').value = rememberedUsername
+const loginUsernameInput = document.querySelector('#login-username')
+const loginPasswordInput = document.querySelector('#login-password')
+const rememberPasswordCheckbox = document.querySelector('#remember-password')
+localStorage.removeItem('rememberedUsername')
+
+async function loadRememberedCredentials() {
+  try {
+    const result = await authAdapter.getRememberedCredentials()
+    if (result.success && result.credentials) {
+      loginUsernameInput.value = result.credentials.username
+      loginPasswordInput.value = result.credentials.password
+      rememberPasswordCheckbox.checked = true
+      loginPasswordInput.focus()
+      return
+    }
+    loginUsernameInput.focus()
+  } catch {
+    loginUsernameInput.focus()
+  }
+}
+
+rememberPasswordCheckbox.addEventListener('change', async () => {
+  if (rememberPasswordCheckbox.checked) return
+  try {
+    await authAdapter.clearRememberedCredentials()
+  } catch (error) {
+    showMessage(error?.message || '无法清除已记住的密码', 'error')
+  }
+})
 
 document.querySelector('#login-form').addEventListener('submit', async (event) => {
   event.preventDefault()
   const form = event.currentTarget
-  const username = document.querySelector('#login-username').value.trim()
-  const password = document.querySelector('#login-password').value
+  const username = loginUsernameInput.value.trim()
+  const password = loginPasswordInput.value
   setBusy(form, true)
   try {
-    if (document.querySelector('#remember-username').checked) localStorage.setItem('rememberedUsername', username)
-    else localStorage.removeItem('rememberedUsername')
-    const result = await authAdapter.login({ username, password })
+    const result = await authAdapter.login({ username, password, remember: rememberPasswordCheckbox.checked })
     if (result.requiresTwoFactor) {
       showView('two-factor-view')
       showMessage(result.message || '请输入两步验证码', 'info')
@@ -289,4 +322,5 @@ async function loadServerStatus() {
   }
 }
 
+void loadRememberedCredentials()
 void loadServerStatus()

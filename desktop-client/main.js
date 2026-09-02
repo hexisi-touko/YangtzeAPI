@@ -3,6 +3,7 @@ const path = require('node:path')
 const { loadDesktopConfig, logoPathForLoginPage } = require('./src/config')
 const { NewApiClient, NewApiClientError } = require('./src/new-api-client')
 const { PasswordResetStore } = require('./src/password-reset-store')
+const { RememberedCredentialsStore } = require('./src/remembered-credentials-store')
 const { CodexConfigError, CodexConfigManager } = require('./src/codex-config-manager')
 
 const desktopConfig = loadDesktopConfig()
@@ -16,6 +17,7 @@ let userWindow = null
 let apiSession = null
 let apiClient = null
 let passwordResetStore = null
+let rememberedCredentialsStore = null
 let pendingTwoFactor = null
 let codexConfigManager = null
 
@@ -60,6 +62,16 @@ function publicCodexError(error, fallback) {
     return { success: false, message: error.message, code: error.code }
   }
   return { success: false, message: fallback, code: 'CLIENT_ERROR' }
+}
+
+function updateRememberedCredentials({ username, password, remember }) {
+  try {
+    if (remember) rememberedCredentialsStore.save({ username, password })
+    else rememberedCredentialsStore.clear()
+    return ''
+  } catch {
+    return remember ? '系统安全存储不可用，本次未记住密码' : '无法清除本机保存的密码'
+  }
 }
 
 function isServerUrl(candidate) {
@@ -224,17 +236,46 @@ function registerIpcHandlers() {
     }
   })
 
+  ipcMain.handle('auth:get-remembered-credentials', (event) => {
+    requireLoginPage(event)
+    return {
+      success: true,
+      credentials: rememberedCredentialsStore.load(),
+      encryptionAvailable: rememberedCredentialsStore.encryptionAvailable(),
+    }
+  })
+
+  ipcMain.handle('auth:clear-remembered-credentials', (event) => {
+    requireLoginPage(event)
+    rememberedCredentialsStore.clear()
+    return { success: true }
+  })
+
   ipcMain.handle('auth:login', async (event, credentials) => {
     requireLoginPage(event)
     pendingTwoFactor = null
+    const loginCredentials = {
+      username: credentials?.username,
+      password: credentials?.password,
+    }
+    const remember = credentials?.remember === true
     try {
-      const result = await apiClient.login(credentials || {})
+      const result = await apiClient.login(loginCredentials)
       if (result.requiresTwoFactor) {
-        pendingTwoFactor = { flowToken: result.flowToken, expiresAt: result.expiresAt }
+        pendingTwoFactor = {
+          flowToken: result.flowToken,
+          expiresAt: result.expiresAt,
+          credentials: { ...loginCredentials, remember },
+        }
         return { success: true, requiresTwoFactor: true, message: result.message }
       }
+      const credentialWarning = updateRememberedCredentials({ ...loginCredentials, remember })
       await openUserWindow()
-      return { success: true, authenticated: true, message: result.message }
+      return {
+        success: true,
+        authenticated: true,
+        message: credentialWarning ? `${result.message}；${credentialWarning}` : result.message,
+      }
     } catch (error) {
       return publicError(error, '登录失败')
     }
@@ -248,10 +289,16 @@ function registerIpcHandlers() {
       return { success: false, message: '两步验证码已过期，请重新登录' }
     }
     try {
-      const result = await apiClient.verifyTwoFactor({ code, flowToken: pendingTwoFactor.flowToken })
+      const twoFactor = pendingTwoFactor
+      const result = await apiClient.verifyTwoFactor({ code, flowToken: twoFactor.flowToken })
       pendingTwoFactor = null
+      const credentialWarning = updateRememberedCredentials(twoFactor.credentials)
       await openUserWindow()
-      return { success: true, authenticated: true, message: result.message }
+      return {
+        success: true,
+        authenticated: true,
+        message: credentialWarning ? `${result.message}；${credentialWarning}` : result.message,
+      }
     } catch (error) {
       return publicError(error, '两步验证失败')
     }
@@ -326,6 +373,7 @@ function registerIpcHandlers() {
         newPassword,
       })
       passwordResetStore.clear()
+      rememberedCredentialsStore.clear()
       return result
     } catch (error) {
       return publicError(error, '重置密码失败')
@@ -393,6 +441,10 @@ app.whenReady().then(async () => {
   apiClient = new NewApiClient({ config: desktopConfig, session: apiSession })
   passwordResetStore = new PasswordResetStore({
     filePath: path.join(app.getPath('userData'), 'password-reset-request.bin'),
+    safeStorage,
+  })
+  rememberedCredentialsStore = new RememberedCredentialsStore({
+    filePath: path.join(app.getPath('userData'), 'remembered-credentials.bin'),
     safeStorage,
   })
   codexConfigManager = new CodexConfigManager({

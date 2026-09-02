@@ -2,6 +2,8 @@
 
 这是一个 Electron 桌面客户端，提供固定尺寸的本地登录、注册申请、两步验证和找回密码界面。登录成功后，客户端使用同一持久会话打开配置的 New API 成员页面，并可安全地配置和检测本机 Codex。
 
+勾选“记住密码”后，客户端只在服务端确认登录成功（含两步验证完成）时保存账号密码。凭据通过 Electron `safeStorage` 和 Windows 系统加密后保存在当前成员电脑的应用数据目录，不会写入浏览器明文存储、项目仓库或 New API 云服务器；系统安全存储不可用时不进行明文降级。
+
 产品名称、安装包文件名、Logo、服务器地址、用户页面路径和接口路径都由 `desktop.config.json` 管理，不需要在源码中逐处改名。
 
 ## 当前兼容状态
@@ -27,7 +29,8 @@ desktop-client/
 │  ├─ config.js                    JSON 加载与安全校验
 │  ├─ new-api-client.js            New API 请求适配器
 │  ├─ codex-config-manager.js       Codex 配置检测、备份和写入
-│  └─ password-reset-store.js      Windows 加密申请凭证存储
+│  ├─ password-reset-store.js      Windows 加密申请凭证存储
+│  └─ remembered-credentials-store.js Windows 加密登录凭据存储
 ├─ ui/                             本地登录界面
 ├─ test/                           Node 单元测试
 ├─ scripts/

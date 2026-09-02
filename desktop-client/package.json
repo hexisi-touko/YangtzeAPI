@@ -7,7 +7,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check user-preload.js && node --check electron-builder.config.js && node --check src/config.js && node --check src/new-api-client.js && node --check src/codex-config-manager.js && node --check src/password-reset-store.js && node --check scripts/generate-icon.js && node --check ui/login.js",
+    "check": "node --check main.js && node --check preload.js && node --check user-preload.js && node --check electron-builder.config.js && node --check src/config.js && node --check src/new-api-client.js && node --check src/codex-config-manager.js && node --check src/password-reset-store.js && node --check src/remembered-credentials-store.js && node --check scripts/generate-icon.js && node --check ui/login.js",
     "test": "node --test test/*.test.js",
     "visual:check": "electron scripts/visual-check.js",
     "icon:generate": "electron scripts/generate-icon.js",

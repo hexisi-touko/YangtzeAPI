@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('desktopWindow', {
 // 只暴露固定认证动作，不向本地页面提供通用 IPC、网络、文件或 Shell 能力。
 contextBridge.exposeInMainWorld('desktopAuth', {
   getStatus: () => ipcRenderer.invoke('auth:status'),
+  getRememberedCredentials: () => ipcRenderer.invoke('auth:get-remembered-credentials'),
+  clearRememberedCredentials: () => ipcRenderer.invoke('auth:clear-remembered-credentials'),
   login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
   verifyTwoFactor: (code) => ipcRenderer.invoke('auth:verify-2fa', code),
   submitRegistrationApplication: (application) =>
