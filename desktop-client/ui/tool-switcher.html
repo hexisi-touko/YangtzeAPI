@@ -23,7 +23,7 @@
         </div>
       </div>
 
-      <!-- Agent 列表导航 (单 Agent 对应专属账号) -->
+      <!-- Agent 列表导航 (单 Agent 对应单账号) -->
       <nav class="agent-nav">
         <div class="nav-label">客户端 (Agents)</div>
         <button class="nav-agent-item active" type="button" data-tab="codex-gpt">
@@ -34,7 +34,7 @@
           </div>
           <div class="agent-nav-info">
             <div class="agent-nav-title">Codex (ChatGPT)</div>
-            <div class="agent-nav-sub">单账号专属托管</div>
+            <div class="agent-nav-sub">单账号托管</div>
           </div>
           <span class="nav-active-pill">当前</span>
         </button>
@@ -52,7 +52,7 @@
         </button>
       </nav>
 
-      <!-- 侧边栏底部信息 -->
+      <!-- 侧边栏底部用户信息 -->
       <div class="sidebar-bottom">
         <div class="user-profile-box">
           <div class="user-avatar" id="user-avatar">U</div>
@@ -86,17 +86,21 @@
       </div>
     </aside>
 
-    <!-- 右侧主内容区 -->
+    <!-- 右侧主内容区 (清爽列表模式，完全对齐图二) -->
     <main class="app-main">
       <!-- 顶部标题与主题切换栏 -->
       <header class="main-topbar">
         <div class="topbar-left">
-          <h2 class="active-agent-title">Codex 专属供应商配置</h2>
-          <span class="active-agent-subtitle">当前 Agent 已绑定单账号 · 管理员预置 · 只读锁定</span>
+          <div class="breadcrumb-trail">
+            <span>工作区</span>
+            <span class="sep">/</span>
+            <span class="active-crumb">Codex (ChatGPT)</span>
+          </div>
+          <h2 class="active-agent-title">供应商账号</h2>
         </div>
 
         <div class="topbar-right">
-          <!-- 亮色/暗色主题切换按钮 (默认浅色白色) -->
+          <!-- 亮色/暗色外观切换按钮 (默认浅色白色) -->
           <button id="theme-toggle-btn" class="theme-toggle" title="切换浅色 / 深色外观" type="button">
             <span class="theme-icon sun-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -129,81 +133,164 @@
       <!-- 操作反馈提示条 (Toast Banner) -->
       <div id="message" class="message-banner" role="status"></div>
 
-      <!-- 1. 截图一展示的单账号卡片行 (拖拽点 + 绿色官方Logo + 标题 + 副标题) -->
-      <section class="account-overview-card">
-        <div class="drag-handle" title="固定专属单账号">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="8" cy="6" r="2"/><circle cx="16" cy="6" r="2"/>
-            <circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/>
-            <circle cx="8" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>
-          </svg>
-        </div>
+      <!-- 账号列表容器 (1:1 精确复刻图二结构与质感) -->
+      <section class="provider-list-container">
+        <!-- 激活的 OpenAI Official 账号卡片 -->
+        <article class="provider-card active-provider" id="codex-provider-card">
+          <!-- 左侧部分：拖拽手柄 + 绿色方形官方Logo + 标题与副标题 -->
+          <div class="card-left-section">
+            <div class="drag-handle" title="固定专属单账号">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="8" cy="6" r="2"/><circle cx="16" cy="6" r="2"/>
+                <circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/>
+                <circle cx="8" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>
+              </svg>
+            </div>
 
-        <div class="brand-square-logo">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.66-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1401-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.8956zm16.0993 3.8558L12.5973 8.3829l2.02-1.1635a.0804.0804 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.402-.6863zm2.0007-3.6231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L8.809 8.6298V6.2974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM11.9961 7.0565l3.832 2.2096v4.4144l-3.832 2.2096-3.832-2.2096V9.2661z"/>
-          </svg>
-        </div>
+            <div class="provider-logo-box">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.66-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1401-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.8956zm16.0993 3.8558L12.5973 8.3829l2.02-1.1635a.0804.0804 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.402-.6863zm2.0007-3.6231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L8.809 8.6298V6.2974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM11.9961 7.0565l3.832 2.2096v4.4144l-3.832 2.2096-3.832-2.2096V9.2661z"/>
+              </svg>
+            </div>
 
-        <div class="account-meta">
-          <div class="account-title-line">
-            <span class="account-title">OpenAI Official</span>
-            <span id="status-badge" class="status-indicator-badge status-disabled">未启用</span>
-            <span class="readonly-pill">只读锁定</span>
+            <div class="provider-info-col">
+              <div class="provider-title-line">
+                <span class="provider-name">OpenAI Official</span>
+                <span id="card-status-badge" class="badge-status badge-disabled">未启用</span>
+              </div>
+              <div class="provider-desc">账号会随 Codex CLI 当前登录变化</div>
+            </div>
           </div>
-          <div class="account-subtitle">账号会随 Codex CLI 当前登录变化 · 管理员已预置完成</div>
-        </div>
 
-        <div class="account-actions">
-          <button id="enable-launch-btn" class="btn btn-primary" type="button">
-            <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-            <span id="enable-btn-text">启用并启动</span>
-          </button>
-          <button id="disable-btn" class="btn btn-secondary" type="button" disabled>
-            <span>停用</span>
-          </button>
+          <!-- 右侧操作组 (1:1 还原图二)：蓝色按钮 + 5个功能小图标 -->
+          <div class="card-right-section">
+            <!-- 蓝色大按钮 (图二核心：▷ 启用 / ▷ 启动) -->
+            <button id="btn-main-enable" class="btn-primary-blue" type="button">
+              <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="6 4 19 12 6 20 6 4"/>
+              </svg>
+              <span id="btn-main-text">启用</span>
+            </button>
+
+            <!-- 5个功能小图标组 (图二右侧图标组) -->
+            <div class="action-icon-group">
+              <!-- 1. 编辑/查看详情图标 (点击打开完整配置表单弹窗) -->
+              <button id="btn-view-config" class="icon-btn" type="button" title="查看供应商配置详情">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+
+              <!-- 2. 复制 API Key 图标 -->
+              <button id="btn-quick-copy" class="icon-btn" type="button" title="一键复制 API Key">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </button>
+
+              <!-- 3. 测速与连通性检测图标 -->
+              <button id="btn-ping" class="icon-btn" type="button" title="检测服务网关连通与延迟">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+              </button>
+
+              <!-- 4. 用量与额度统计图标 -->
+              <button id="btn-usage" class="icon-btn" type="button" title="查看当前账号用量与额度">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+              </button>
+
+              <!-- 5. 停用/清除配置图标 -->
+              <button id="btn-disable" class="icon-btn icon-btn-danger" type="button" title="停用并清除本地配置" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- 底部快捷提示条 -->
+        <div class="card-status-note">
+          <span class="note-bullet">💡</span>
+          <span>单 Agent 单账号模式：点击 <strong>「▷ 启用」</strong> 即可自动将管理员预分配的配置同步写入并唤起 ChatGPT 桌面版。</span>
         </div>
       </section>
+    </main>
+  </div>
 
-      <!-- 2. 截图二与截图三完全对应的表单容器 (用户能看到，但改不了) -->
-      <section class="form-container-card">
-        <!-- 供应商名称与备注 -->
+  <!-- =========================================================================
+       供应商配置详情弹窗 (Modal)
+       完全 1:1 还原用户提供的两张表单截图！用户可见全部参数，但全部只读锁定防篡改
+       ========================================================================= -->
+  <div id="config-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-dialog">
+      <!-- 弹窗顶栏 -->
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <button id="modal-back-btn" class="modal-back-icon-btn" type="button" title="返回">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </button>
+          <div class="modal-title-wrap">
+            <h3 class="modal-title">供应商配置详情</h3>
+            <span class="modal-badge-readonly">管理员已锁定 · 只读</span>
+          </div>
+        </div>
+        <button id="modal-close-btn" class="modal-close-btn" type="button" title="关闭">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 弹窗滚动表单主体 (截图二与截图三完全还原) -->
+      <div class="modal-body">
+        <!-- 供应商名称 与 备注 -->
         <div class="form-row form-grid-2">
           <div class="form-group">
-            <label class="form-label" for="provider-name">供应商名称</label>
-            <input class="form-input readonly-input" id="provider-name" type="text" value="OpenAI Official" readonly tabindex="-1">
+            <label class="form-label" for="modal-provider-name">供应商名称</label>
+            <input class="form-input readonly-input" id="modal-provider-name" type="text" value="OpenAI Official" readonly tabindex="-1">
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="provider-note">备注</label>
-            <input class="form-input readonly-input" id="provider-note" type="text" value="实验室成员专属账号" readonly tabindex="-1">
+            <label class="form-label" for="modal-provider-note">备注</label>
+            <input class="form-input readonly-input" id="modal-provider-note" type="text" value="例如：公司专用账号" readonly tabindex="-1">
           </div>
         </div>
 
         <!-- 官网链接 -->
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="provider-website">官网链接</label>
-            <input class="form-input readonly-input" id="provider-website" type="text" value="https://chatgpt.com/codex" readonly tabindex="-1">
+            <label class="form-label" for="modal-provider-website">官网链接</label>
+            <input class="form-input readonly-input" id="modal-provider-website" type="text" value="https://chatgpt.com/codex" readonly tabindex="-1">
           </div>
         </div>
 
-        <!-- API Key (只读，但提供眼睛切换与复制) -->
+        <!-- API Key (原版小眼睛显隐 + 一键复制) -->
         <div class="form-row">
           <div class="form-group">
             <div class="form-label-row">
-              <label class="form-label" for="provider-api-key">API Key</label>
-              <div class="input-actions-right">
-                <button id="toggle-key-visibility" class="text-action-btn" type="button" title="查看或隐藏 API Key">
-                  <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <label class="form-label" for="modal-provider-key">API Key</label>
+              <div class="label-actions-right">
+                <button id="modal-toggle-eye" class="action-text-link" type="button">
+                  <svg id="modal-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                     <circle cx="12" cy="12" r="3"/>
                   </svg>
-                  <span id="eye-text">显示</span>
+                  <span id="modal-eye-text">显示</span>
                 </button>
-                <button id="copy-key-btn" class="text-action-btn" type="button" title="复制完整 API 密钥">
+                <button id="modal-copy-key" class="action-text-link" type="button">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -212,8 +299,8 @@
                 </button>
               </div>
             </div>
-            <input class="form-input readonly-input font-mono" id="provider-api-key" type="password" value="" readonly tabindex="-1">
-            <div class="form-field-tip">只需要填这里，下方 auth.json 会自动填充（管理员已预先配置，只读展示）</div>
+            <input class="form-input readonly-input font-mono" id="modal-provider-key" type="password" value="" readonly tabindex="-1">
+            <div class="field-hint">只需要填这里，下方 auth.json 会自动填充</div>
           </div>
         </div>
 
@@ -221,41 +308,42 @@
         <div class="form-row">
           <div class="form-group">
             <div class="form-label-row">
-              <label class="form-label" for="provider-api-url">API 请求地址</label>
-              <div class="endpoint-switch-wrap">
-                <span class="switch-icon">
+              <label class="form-label" for="modal-provider-url">API 请求地址</label>
+              <div class="url-switch-group">
+                <span class="url-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
                   </svg>
                 </span>
-                <span class="switch-text">完整 URL</span>
-                <span class="fake-switch checked"></span>
+                <span class="url-switch-label">完整 URL</span>
+                <span class="switch-pill checked"></span>
               </div>
             </div>
-            <div class="input-with-copy">
-              <input class="form-input readonly-input font-mono" id="provider-api-url" type="text" value="" readonly tabindex="-1">
-              <button id="copy-url-btn" class="inner-copy-btn" type="button" title="复制网关地址">
+            <div class="input-with-copy-box">
+              <input class="form-input readonly-input font-mono" id="modal-provider-url" type="text" value="" readonly tabindex="-1">
+              <button id="modal-copy-url" class="btn-inside-copy" type="button" title="复制完整服务端点">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
               </button>
             </div>
-            <div class="alert-notice-box">
-              <span class="alert-bulb">💡</span>
+            <!-- 黄色提示框 (截图二原版复刻) -->
+            <div class="yellow-notice-alert">
+              <span class="notice-emoji">💡</span>
               <span>填写兼容 OpenAI Response 格式的服务端点地址</span>
             </div>
           </div>
         </div>
 
-        <!-- 默认模型 -->
+        <!-- 默认模型 (截图二原版复刻) -->
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="provider-default-model">默认模型</label>
-            <div class="input-with-icon">
-              <input class="form-input readonly-input font-mono" id="provider-default-model" type="text" value="gpt-5.6-sol" readonly tabindex="-1">
-              <div class="input-trailing-icon" title="内置预设">
+            <label class="form-label" for="modal-provider-model">默认模型</label>
+            <div class="input-with-icon-box">
+              <input class="form-input readonly-input font-mono" id="modal-provider-model" type="text" value="gpt-5.6-sol" readonly tabindex="-1">
+              <div class="input-trailing-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="7 10 12 15 17 10"/>
@@ -263,40 +351,40 @@
                 </svg>
               </div>
             </div>
-            <div class="form-field-tip">Codex 默认请求的模型，随时可改，无需等待预设更新。留空且配置了模型映射时，默认使用映射第一行。</div>
+            <div class="field-hint">Codex 默认请求的模型，随时可改，无需等待预设更新。留空且配置了模型映射时，默认使用映射第一行。</div>
           </div>
         </div>
 
-        <!-- 高级选项面板 (折叠卡片) -->
-        <div class="advanced-section-card">
-          <div class="advanced-header">
-            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- 高级选项卡片 (截图二/三原版复刻) -->
+        <div class="advanced-card">
+          <div class="advanced-card-header">
+            <svg class="chevron-down-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
-            <span class="advanced-title">高级选项</span>
+            <span class="advanced-card-title">高级选项</span>
           </div>
 
-          <div class="advanced-content">
+          <div class="advanced-card-content">
             <!-- 上游格式 -->
             <div class="form-group">
-              <label class="form-label" for="provider-upstream-format">上游格式</label>
-              <div class="select-box-wrap">
-                <input class="form-input readonly-input" id="provider-upstream-format" type="text" value="Responses（原生）" readonly tabindex="-1">
-                <svg class="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <label class="form-label" for="modal-upstream-format">上游格式</label>
+              <div class="select-wrapper">
+                <input class="form-input readonly-input" id="modal-upstream-format" type="text" value="Responses（原生）" readonly tabindex="-1">
+                <svg class="select-chevron-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
               </div>
-              <div class="form-field-tip">
+              <div class="field-hint">
                 供应商原生为 Responses API 就选 Responses（直连，不转换格式）；使用 Chat Completions 协议就选 Chat；供应商只提供原生 Anthropic Messages 协议就选 Anthropic Messages。Chat 与 Anthropic Messages 均需开启路由接管才能转换为 Responses。
               </div>
             </div>
 
             <!-- 模型映射 -->
-            <div class="form-group" style="margin-top: 18px;">
-              <div class="model-mapping-head">
+            <div class="form-group" style="margin-top: 16px;">
+              <div class="mapping-title-row">
                 <label class="form-label" style="margin-bottom: 0;">模型映射</label>
-                <div class="mapping-buttons">
-                  <button class="btn-subtle disabled" type="button" disabled>
+                <div class="mapping-actions-btns">
+                  <button class="btn-mapping-action disabled" type="button" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="7 10 12 15 17 10"/>
@@ -304,7 +392,7 @@
                     </svg>
                     <span>获取模型列表</span>
                   </button>
-                  <button class="btn-subtle disabled" type="button" disabled>
+                  <button class="btn-mapping-action disabled" type="button" disabled>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="12" y1="5" x2="12" y2="19"/>
                       <line x1="5" y1="12" x2="19" y2="12"/>
@@ -313,23 +401,36 @@
                   </button>
                 </div>
               </div>
-              <div class="form-field-tip" style="margin-top: 6px;">
+              <div class="field-hint" style="margin-top: 6px;">
                 生成 Codex model_catalog.json，让 /model 命令显示这些第三方模型名；表中条目按填写内容原样保存。修改后需要重启 Codex 才能刷新模型列表。
               </div>
 
-              <!-- 映射条目只读预览 -->
-              <div class="mapping-table-preview">
-                <div class="mapping-item">
-                  <span class="mapping-dot"></span>
-                  <span class="mapping-name font-mono" id="mapping-model-name">gpt-5.6-sol</span>
-                  <span class="mapping-tag">已同步至本地配置</span>
+              <!-- 映射列表预览 -->
+              <div class="mapping-preview-box">
+                <div class="mapping-row-item">
+                  <span class="mapping-green-dot"></span>
+                  <span class="mapping-model-id font-mono" id="modal-mapping-model">gpt-5.6-sol</span>
+                  <span class="mapping-sync-tag">已同步至本地配置</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
+
+      <!-- 弹窗底栏 -->
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <span class="readonly-status-tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            管理端统一分发 · 用户端只读锁定
+          </span>
+        </div>
+        <div class="modal-footer-right">
+          <button id="modal-btn-close" class="btn-modal-close" type="button">关闭</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="tool-switcher.js"></script>

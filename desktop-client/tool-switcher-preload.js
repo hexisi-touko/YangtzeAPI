@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('desktopTools', {
   enable: (toolId) => ipcRenderer.invoke('desktop-tools:enable', toolId),
   disable: (toolId) => ipcRenderer.invoke('desktop-tools:disable', toolId),
   launch: (toolId) => ipcRenderer.invoke('desktop-tools:launch', toolId),
+  ping: () => ipcRenderer.invoke('desktop-tools:ping'),
   openDashboard: () => ipcRenderer.invoke('desktop-tools:open-dashboard'),
   logout: () => ipcRenderer.invoke('desktop-tools:logout'),
 })

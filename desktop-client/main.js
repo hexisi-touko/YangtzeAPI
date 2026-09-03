@@ -303,10 +303,11 @@ function registerIpcHandlers() {
     try {
       const result = await apiClient.getDesktopTools()
       toolSyncManager.setServerConfigs(result.tools)
+      const self = await apiClient.getSelf()
       return {
         success: true,
         tools: toolSyncManager.getState(),
-        account: currentAccount,
+        account: self || currentAccount,
         serverUrl: desktopConfig.serverUrl,
         productName: desktopConfig.productName,
       }
@@ -320,15 +321,27 @@ function registerIpcHandlers() {
     try {
       const result = await apiClient.getDesktopTools()
       toolSyncManager.setServerConfigs(result.tools)
+      const self = await apiClient.getSelf()
       return {
         success: true,
         tools: toolSyncManager.getState(),
-        account: currentAccount,
+        account: self || currentAccount,
         serverUrl: desktopConfig.serverUrl,
         productName: desktopConfig.productName,
       }
     } catch (error) {
       return publicError(error, '刷新工具配置失败')
+    }
+  })
+
+  ipcMain.handle('desktop-tools:ping', async (event) => {
+    requireToolSwitcherPage(event)
+    const startTime = Date.now()
+    try {
+      await apiClient.getStatus()
+      return { success: true, latencyMs: Date.now() - startTime }
+    } catch (error) {
+      return { success: false, message: '无法连接服务网关' }
     }
   })
 

@@ -270,12 +270,44 @@ class NewApiClient {
     return { success: true, message: responseMessage(payload, '密码重置成功，请返回登录') }
   }
 
+  async getSelf() {
+    try {
+      const payload = await this.request('/api/user/self')
+      return payload?.data || null
+    } catch {
+      return null
+    }
+  }
+
   async getUserTokens() {
-    const payload = await this.request('/api/token', { query: { p: 0, size: 10 } })
-    const items = Array.isArray(payload?.data) ? payload.data : []
-    return items
-      .filter((t) => t.status === 1)
-      .map((t) => ({ key: t.key, name: t.name || '' }))
+    let payload
+    try {
+      payload = await this.request('/api/token/', { query: { p: 1, size: 10 } })
+    } catch {
+      payload = await this.request('/api/token', { query: { p: 1, size: 10 } })
+    }
+    const data = payload?.data
+    const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : [])
+    const active = items.filter((t) => t.status === 1)
+    const result = []
+    for (const token of active) {
+      let realKey = token.key
+      if (token.id) {
+        try {
+          const keyPayload = await this.request(`/api/token/${token.id}/key`, { method: 'POST' })
+          if (keyPayload?.data?.key) {
+            realKey = keyPayload.data.key
+          }
+        } catch {
+          // fallback to token.key
+        }
+      }
+      if (realKey && !realKey.startsWith('sk-')) {
+        realKey = `sk-${realKey}`
+      }
+      result.push({ key: realKey, name: token.name || '' })
+    }
+    return result
   }
 
   async getAvailableModels() {
