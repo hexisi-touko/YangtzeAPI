@@ -74,14 +74,18 @@ class NewApiClient {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs)
     let response
+    const headers = {
+      Accept: 'application/json',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    }
+    if (this.accessToken) {
+      headers.Authorization = `Bearer ${this.accessToken}`
+    }
     try {
       response = await this.session.fetch(this.buildUrl(apiPath, query), {
         method,
         body: body === undefined ? undefined : JSON.stringify(body),
-        headers: {
-          Accept: 'application/json',
-          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        },
+        headers,
         credentials: 'include',
         cache: 'no-store',
         redirect: 'error',
@@ -158,6 +162,9 @@ class NewApiClient {
         message: responseMessage(payload, '请输入两步验证码'),
       }
     }
+    if (payload?.data?.access_token) {
+      this.accessToken = payload.data.access_token
+    }
     return {
       authenticated: true,
       requiresTwoFactor: false,
@@ -174,6 +181,9 @@ class NewApiClient {
         flow_token: requireValue(flowToken, '两步验证流程令牌', 2048),
       },
     })
+    if (payload?.data?.access_token) {
+      this.accessToken = payload.data.access_token
+    }
     return {
       authenticated: true,
       accountRole: authenticatedAccountRole(payload),

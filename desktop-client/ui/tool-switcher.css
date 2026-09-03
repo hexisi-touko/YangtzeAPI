@@ -143,7 +143,7 @@ body {
 
 /* ================= 顶栏头部 (纯白无边框 + 拖拽区 + 窗口控制) ================= */
 .app-topbar {
-  height: 48px;
+  height: 52px;
   background-color: var(--bg-topbar);
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -167,13 +167,13 @@ body {
 .topbar-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   -webkit-app-region: no-drag;
 }
 
 .brand-avatar-box {
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,8 +181,8 @@ body {
 }
 
 .brand-custom-logo {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
 }
 
@@ -1133,6 +1133,104 @@ html[data-theme="dark"] .message-banner.error {
   margin-left: auto;
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* 新增：自定义 UA 与请求覆盖 样式 */
+.preset-tag-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.sub-label-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.code-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  line-height: 1.4;
+  resize: vertical;
+  outline: none;
+  min-height: 72px;
+}
+
+.code-box-auth {
+  min-height: 76px;
+  background-color: #f1f5f9;
+}
+
+html[data-theme="dark"] .code-box-auth {
+  background-color: #0d1117;
+}
+
+.code-box-toml {
+  min-height: 120px;
+  background-color: #f8fafc;
+}
+
+html[data-theme="dark"] .code-box-toml {
+  background-color: #0d1117;
+}
+
+.format-action-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.toml-options-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: default;
+}
+
+.link-span-text {
+  color: #3b82f6;
+  cursor: default;
+}
+
+.compress-threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.compress-label {
+  color: var(--text-muted);
+}
+
+.compress-input {
+  width: 80px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 /* 弹窗底栏 */

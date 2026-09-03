@@ -306,6 +306,81 @@
                 </div>
               </div>
             </div>
+
+            <!-- 自定义 User-Agent (新增截图 1:1 复刻) -->
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="modal-custom-ua">自定义 User-Agent</label>
+              <div class="input-with-icon-box">
+                <input class="form-input readonly-input font-mono" id="modal-custom-ua" type="text" value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36" readonly tabindex="-1">
+                <div class="input-trailing-icon" style="pointer-events: auto; cursor: default;">
+                  <span class="preset-tag-text">预设 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px; display: inline;"><polyline points="6 9 12 15 18 9"/></svg></span>
+                </div>
+              </div>
+              <div class="field-hint">仅在开启本地路由/代理接管后生效，会替换转发到供应商 API 请求中的 User-Agent。</div>
+            </div>
+
+            <!-- 本地代理请求覆盖 (新增截图 1:1 复刻) -->
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label">本地代理请求覆盖</label>
+              <div class="field-hint" style="margin-top: -2px; margin-bottom: 6px;">仅在本地路由/代理接管后生效，应用于协议转换后的上游请求。</div>
+              <div class="form-grid-2">
+                <div>
+                  <div class="sub-label-text">Header 覆盖</div>
+                  <textarea class="code-textarea readonly-input font-mono" readonly tabindex="-1">{
+  "X-Provider": "custom"
+}</textarea>
+                </div>
+                <div>
+                  <div class="sub-label-text">Body 覆盖</div>
+                  <textarea class="code-textarea readonly-input font-mono" readonly tabindex="-1">{
+  "temperature": 0.2
+}</textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- auth.json (JSON) * (新增截图二 1:1 复刻代码框) -->
+        <div class="form-row" style="margin-top: 12px;">
+          <div class="form-group">
+            <div class="form-label-row">
+              <label class="form-label">auth.json (JSON) *</label>
+              <span class="format-action-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;display:inline;"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> 格式化</span>
+            </div>
+            <textarea id="modal-auth-json" class="code-textarea code-box-auth readonly-input font-mono" readonly tabindex="-1">{\n  "OPENAI_API_KEY": "sk-your-api-key-here"\n}</textarea>
+            <div class="field-hint">Codex auth.json 配置内容</div>
+          </div>
+        </div>
+
+        <!-- config.toml (TOML) (新增截图二 1:1 复刻代码框与复选框) -->
+        <div class="form-row" style="margin-top: 12px;">
+          <div class="form-group">
+            <div class="form-label-row">
+              <label class="form-label">config.toml (TOML)</label>
+              <div class="toml-options-row">
+                <label class="checkbox-label"><input type="checkbox" disabled> 启用远程压缩</label>
+                <label class="checkbox-label"><input type="checkbox" disabled> 应用通用配置</label>
+                <span class="link-span-text">编辑通用配置</span>
+              </div>
+            </div>
+            <div class="compress-threshold-row">
+              <label class="checkbox-label"><input type="checkbox" disabled> 1M 上下文窗口</label>
+              <span class="compress-label">压缩阈值:</span>
+              <input class="compress-input font-mono readonly-input" type="text" value="900000" readonly tabindex="-1">
+            </div>
+            <textarea id="modal-config-toml" class="code-textarea code-box-toml readonly-input font-mono" readonly tabindex="-1">model_provider = "yangtzeapi"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+disable_response_storage = true
+
+[model_providers.yangtzeapi]
+name = "yangtzeapi"
+base_url = "http://127.0.0.1:3000/v1"
+wire_api = "responses"
+requires_openai_auth = false
+experimental_bearer_token = "sk-your-api-key-here"</textarea>
+            <div class="field-hint">Codex config.toml 配置内容</div>
           </div>
         </div>
       </div>

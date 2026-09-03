@@ -136,13 +136,41 @@ function openModal(tool) {
   // 表单字段填充
   modalProviderName.value = tool.name
   modalProviderNote.value = `${currentAppMeta.account?.username || '用户'} · 专属账号`
-  modalProviderWebsite.value = tool.id === 'codex-gpt' ? 'https://chatgpt.com/codex' : (tool.id === 'claude-code' ? 'https://claude.ai' : 'https://gemini.google.com')
+
+  // 官网链接：严格按用户要求，统一指向当前 New API 服务端点
+  modalProviderWebsite.value = currentAppMeta.serverUrl || 'http://127.0.0.1:3000'
 
   // 核心：把服务端分发的用户真实的 API Key 与 New API 的实际 URL 填充上去
   modalProviderKey.value = tool.apiKey || ''
   modalProviderUrl.value = tool.apiBaseUrl || `${currentAppMeta.serverUrl || 'http://127.0.0.1:3000'}/v1`
   modalProviderModel.value = tool.model || 'gpt-5.6-sol'
   modalMappingModel.textContent = tool.model || 'gpt-5.6-sol'
+
+  // 动态同步高级选项里的 auth.json (JSON) 预览区
+  const modalAuthJson = document.querySelector('#modal-auth-json')
+  if (modalAuthJson) {
+    const authObj = { OPENAI_API_KEY: tool.apiKey || "sk-your-api-key-here" }
+    modalAuthJson.value = JSON.stringify(authObj, null, 2)
+  }
+
+  // 动态同步高级选项里的 config.toml (TOML) 预览区
+  const modalConfigToml = document.querySelector('#modal-config-toml')
+  if (modalConfigToml) {
+    const tomlLines = [
+      'model_provider = "yangtzeapi"',
+      `model = "${tool.model || 'gpt-5.6-sol'}"`,
+      'model_reasoning_effort = "medium"',
+      'disable_response_storage = true',
+      '',
+      '[model_providers.yangtzeapi]',
+      'name = "yangtzeapi"',
+      `base_url = "${tool.apiBaseUrl || (currentAppMeta.serverUrl + '/v1')}"`,
+      'wire_api = "responses"',
+      'requires_openai_auth = false',
+      `experimental_bearer_token = "${tool.apiKey || 'sk-your-api-key-here'}"`
+    ]
+    modalConfigToml.value = tomlLines.join('\n')
+  }
 
   configModal.classList.add('visible')
   configModal.setAttribute('aria-hidden', 'false')
@@ -252,13 +280,21 @@ function renderCards(tools, appMeta = {}) {
       subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${tool.apiBaseUrl || appMeta.serverUrl}</a>`
     }
 
-    // 状态徽章
+    // 状态徽章：只有真正处于 enabled 时才是已启用
     const isEnabled = tool.status === 'enabled'
     const statusBadgeHtml = isEnabled
       ? `<span class="badge-status badge-enabled">已启用</span>`
       : `<span class="badge-status badge-disabled">未启用</span>`
 
-    // 主按钮文本
+    // 关键修正：蓝边表示当前已激活/启用的配置！
+    // 如果没有任何工具已启用，则默认激活第一个（Codex），一旦用户启用了某个工具，该工具显示蓝边
+    const anyEnabled = currentToolsList.some((t) => t.status === 'enabled')
+    const shouldHighlight = isEnabled || (!anyEnabled && tool.id === 'codex-gpt')
+
+    card.className = `provider-card ${shouldHighlight ? 'card-active' : ''}`
+    card.dataset.toolId = tool.id
+
+    // 主按钮文本：未启用显示「启用」，已启用显示「启动客户端」
     const mainBtnText = isEnabled ? '启动客户端' : '启用'
     const mainBtnClass = isEnabled ? 'btn-primary-blue btn-in-use' : 'btn-primary-blue'
 
