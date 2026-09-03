@@ -3,9 +3,9 @@
   "artifactBaseName": "API-Client",
   "logoPath": "ui/assets/logo.svg",
   "appIconPath": "build/icon.ico",
-  "serverUrl": "https://api.example.com",
+  "serverUrl": "http://127.0.0.1:3000",
   "userPagePath": "/dashboard",
-  "allowInsecureHttp": false,
+  "allowInsecureHttp": true,
   "apiPaths": {
     "status": "/api/status",
     "login": "/api/user/login",
@@ -14,6 +14,7 @@
     "registrationApplicationStatus": "/api/user/application/status",
     "passwordResetApplication": "/api/user/password-reset-applications",
     "passwordResetStatus": "/api/user/password-reset-applications/status",
-    "passwordResetComplete": "/api/user/password-reset-applications/complete"
+    "passwordResetComplete": "/api/user/password-reset-applications/complete",
+    "desktopTools": "/api/user/desktop-tools"
   }
 }

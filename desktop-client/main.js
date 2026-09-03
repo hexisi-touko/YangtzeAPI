@@ -4,6 +4,10 @@ const { loadDesktopConfig, logoPathForLoginPage } = require('./src/config')
 const { NewApiClient, NewApiClientError } = require('./src/new-api-client')
 const { PasswordResetStore } = require('./src/password-reset-store')
 const { CredentialStore } = require('./src/credential-store')
+const { ToolSyncManager } = require('./src/tool-sync/manager')
+const { ClaudeAdapter } = require('./src/tool-sync/claude-adapter')
+const { CodexAdapter } = require('./src/tool-sync/codex-adapter')
+const { launchTool } = require('./src/tool-sync/process-launcher')
 
 const desktopConfig = loadDesktopConfig()
 const LOGIN_WINDOW_WIDTH = 420
@@ -12,12 +16,15 @@ const USER_SESSION_PARTITION = desktopConfig.sessionPartition
 
 let loginWindow = null
 let userWindow = null
+let toolSwitcherWindow = null
 let apiSession = null
 let apiClient = null
 let passwordResetStore = null
 let credentialStore = null
 let pendingTwoFactor = null
 let pendingRegistration = null
+let toolSyncManager = null
+let currentAccount = null
 
 app.enableSandbox()
 if (desktopConfig.userDataDirectoryName) {
@@ -36,6 +43,19 @@ function isLoginPage(event) {
 
 function requireLoginPage(event) {
   if (!isLoginPage(event)) throw new Error('Unauthorized window request')
+}
+
+function isToolSwitcherPage(event) {
+  try {
+    const sender = new URL(event.senderFrame.url)
+    return sender.protocol === 'file:' && path.basename(sender.pathname) === 'tool-switcher.html'
+  } catch {
+    return false
+  }
+}
+
+function requireToolSwitcherPage(event) {
+  if (!isToolSwitcherPage(event)) throw new Error('Unauthorized window request')
 }
 
 function publicError(error, fallback) {
@@ -99,6 +119,12 @@ function returnToLoginFromUserWindow() {
   showLoginWindow()
 }
 
+function returnToLoginFromToolSwitcher() {
+  if (toolSwitcherWindow && !toolSwitcherWindow.isDestroyed()) toolSwitcherWindow.destroy()
+  toolSwitcherWindow = null
+  showLoginWindow()
+}
+
 function attachUserWindowGuards(window) {
   const guardNavigation = (event, targetUrl) => {
     if (isServerUrl(targetUrl)) return
@@ -124,6 +150,10 @@ function attachUserWindowGuards(window) {
 }
 
 async function openUserWindow() {
+  return openToolSwitcherWindow()
+}
+
+async function openDashboardWindow() {
   if (userWindow && !userWindow.isDestroyed()) {
     userWindow.show()
     userWindow.focus()
@@ -160,6 +190,56 @@ async function openUserWindow() {
     if (userWindow && !userWindow.isDestroyed()) userWindow.destroy()
     userWindow = null
     throw new NewApiClientError('用户页面加载失败，请检查服务器状态', { code: 'PAGE_LOAD_ERROR' })
+  }
+
+  if (loginWindow && !loginWindow.isDestroyed()) {
+    const completedLoginWindow = loginWindow
+    completedLoginWindow.hide()
+    setTimeout(() => {
+      if (!completedLoginWindow.isDestroyed()) completedLoginWindow.close()
+    }, 100)
+  }
+}
+
+async function openToolSwitcherWindow() {
+  if (toolSwitcherWindow && !toolSwitcherWindow.isDestroyed()) {
+    toolSwitcherWindow.show()
+    toolSwitcherWindow.focus()
+    return
+  }
+
+  toolSwitcherWindow = new BrowserWindow({
+    width: 1060,
+    height: 720,
+    minWidth: 840,
+    minHeight: 580,
+    center: true,
+    show: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#ffffff',
+    title: `${desktopConfig.productName} - AI 终端工作台`,
+    webPreferences: {
+      preload: path.join(__dirname, 'tool-switcher-preload.js'),
+      session: apiSession,
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      spellcheck: false,
+      navigateOnDragDrop: false,
+    },
+  })
+  toolSwitcherWindow.webContents.on('will-navigate', (event) => event.preventDefault())
+  toolSwitcherWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  toolSwitcherWindow.once('ready-to-show', () => toolSwitcherWindow?.show())
+  toolSwitcherWindow.on('closed', () => { toolSwitcherWindow = null })
+
+  try {
+    await toolSwitcherWindow.loadFile(path.join(__dirname, 'ui', 'tool-switcher.html'))
+  } catch {
+    if (toolSwitcherWindow && !toolSwitcherWindow.isDestroyed()) toolSwitcherWindow.destroy()
+    toolSwitcherWindow = null
+    throw new NewApiClientError('工具配置页面加载失败', { code: 'PAGE_LOAD_ERROR' })
   }
 
   if (loginWindow && !loginWindow.isDestroyed()) {
@@ -218,6 +298,94 @@ function registerIpcHandlers() {
     BrowserWindow.fromWebContents(event.sender)?.close()
   })
 
+  ipcMain.handle('desktop-tools:get-state', async (event) => {
+    requireToolSwitcherPage(event)
+    try {
+      const result = await apiClient.getDesktopTools()
+      toolSyncManager.setServerConfigs(result.tools)
+      return {
+        success: true,
+        tools: toolSyncManager.getState(),
+        account: currentAccount,
+        serverUrl: desktopConfig.serverUrl,
+        productName: desktopConfig.productName,
+      }
+    } catch (error) {
+      return publicError(error, '无法读取工具配置')
+    }
+  })
+
+  ipcMain.handle('desktop-tools:refresh', async (event) => {
+    requireToolSwitcherPage(event)
+    try {
+      const result = await apiClient.getDesktopTools()
+      toolSyncManager.setServerConfigs(result.tools)
+      return {
+        success: true,
+        tools: toolSyncManager.getState(),
+        account: currentAccount,
+        serverUrl: desktopConfig.serverUrl,
+        productName: desktopConfig.productName,
+      }
+    } catch (error) {
+      return publicError(error, '刷新工具配置失败')
+    }
+  })
+
+  ipcMain.handle('desktop-tools:enable', async (event, toolId) => {
+    requireToolSwitcherPage(event)
+    try {
+      const result = await apiClient.getDesktopTools()
+      const config = result.tools.find((item) => item?.id === toolId)
+      if (!config) return { success: false, message: '该工具尚未分配配置', code: 'TOOL_UNCONFIGURED' }
+      return toolSyncManager.enable(toolId, config)
+    } catch (error) {
+      return publicError(error, '启用工具失败，未修改本地配置')
+    }
+  })
+
+  ipcMain.handle('desktop-tools:disable', (event, toolId) => {
+    requireToolSwitcherPage(event)
+    try { return toolSyncManager.disable(toolId) } catch (error) {
+      return publicError(error, '禁用工具失败')
+    }
+  })
+
+  ipcMain.handle('desktop-tools:launch', (event, toolId) => {
+    requireToolSwitcherPage(event)
+    try {
+      const adapter = toolSyncManager.requireAdapter(toolId)
+      const launch = adapter.launch()
+      return {
+        success: true,
+        launched: launch?.launched === true,
+        message: launch?.message || '',
+      }
+    } catch (error) {
+      return publicError(error, '启动工具失败')
+    }
+  })
+
+  ipcMain.handle('desktop-tools:open-dashboard', async (event) => {
+    requireToolSwitcherPage(event)
+    try {
+      await openDashboardWindow()
+      return { success: true }
+    } catch (error) { return publicError(error, '管理后台打开失败') }
+  })
+
+  ipcMain.handle('desktop-tools:logout', async (event) => {
+    requireToolSwitcherPage(event)
+    try {
+      await apiSession.clearStorageData({ origin: desktopConfig.serverUrl })
+      toolSyncManager.setServerConfigs([])
+      currentAccount = null
+      if (userWindow && !userWindow.isDestroyed()) userWindow.destroy()
+      returnToLoginFromToolSwitcher()
+      return { success: true }
+    } catch (error) { return publicError(error, '退出登录失败') }
+  })
+
   ipcMain.handle('auth:status', async (event) => {
     requireLoginPage(event)
     try {
@@ -258,6 +426,7 @@ function registerIpcHandlers() {
       }
       await requireMemberAccount(result)
       updateSavedCredentials(credentials)
+      currentAccount = { username: credentials?.username || '' }
       await openUserWindow()
       return { success: true, authenticated: true, message: result.message }
     } catch (error) {
@@ -278,6 +447,7 @@ function registerIpcHandlers() {
       pendingTwoFactor = null
       await requireMemberAccount(result)
       updateSavedCredentials(credentials)
+      currentAccount = { username: credentials?.username || '' }
       await openUserWindow()
       return { success: true, authenticated: true, message: result.message }
     } catch (error) {
@@ -386,6 +556,14 @@ app.whenReady().then(async () => {
   apiSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
   apiSession.on('will-download', (event) => event.preventDefault())
   apiClient = new NewApiClient({ config: desktopConfig, session: apiSession })
+  const homeDir = app.getPath('home')
+  toolSyncManager = new ToolSyncManager({
+    allowInsecureHttp: desktopConfig.allowInsecureHttp,
+    adapters: new Map([
+      ['claude-code', new ClaudeAdapter({ homeDir, launcher: launchTool })],
+      ['codex-gpt', new CodexAdapter({ homeDir, launcher: launchTool })],
+    ]),
+  })
   passwordResetStore = new PasswordResetStore({
     filePath: path.join(app.getPath('userData'), 'password-reset-request.bin'),
     safeStorage,

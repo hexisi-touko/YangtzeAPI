@@ -96,6 +96,37 @@ Content-Type: application/json
 }
 ```
 
+## 用户工具配置
+
+```http
+GET /api/user/desktop-tools
+```
+
+该接口使用登录后的同一 Cookie 会话，只返回当前用户由管理员分配的工具配置。客户端主进程会消费完整的 `api_key`，但不会把明文 Key 传给渲染进程；页面只显示脱敏值。
+
+建议响应：
+
+```json
+{
+  "success": true,
+  "data": {
+    "tools": [
+      {
+        "id": "codex-gpt",
+        "name": "GPT / Codex",
+        "api_base_url": "http://127.0.0.1:3000/v1",
+        "model": "gpt-5.2",
+        "api_key": "sk-example",
+        "config_format": "codex-v1",
+        "enabled": true
+      }
+    ]
+  }
+}
+```
+
+`id` 目前只支持 `claude-code` 和 `codex-gpt`。`api_base_url` 必须是无账号密码、无片段的 HTTP(S) 地址；正式环境使用 HTTPS。`config_format` 用于兼容不同客户端版本的本地配置格式。服务端撤销分配后应从 `tools` 中移除该项，客户端不会继续使用旧的内存配置。
+
 ## 提交找回密码申请
 
 ```http

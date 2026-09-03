@@ -1,6 +1,6 @@
 # New API Windows 桌面客户端
 
-这是一个 Electron 桌面客户端，提供固定尺寸的本地登录、注册申请、两步验证和找回密码界面。登录成功后，客户端使用同一持久会话打开配置的 New API 用户页面。
+这是一个 Electron 桌面客户端，提供固定尺寸的本地登录、注册申请、两步验证和找回密码界面。登录成功后，客户端进入本地 AI 工具配置页；管理后台仍使用同一持久会话单独打开。
 
 产品名称、安装包文件名、Logo、服务器地址、用户页面路径和接口路径都由 `desktop.config.json` 管理，不需要在源码中逐处改名。
 
@@ -14,6 +14,7 @@
 - `POST /api/user/password-reset-applications`：由配套 `master` 分支实现找回密码申请
 - `POST /api/user/password-reset-applications/status`：查询本机已提交申请的审核状态
 - `POST /api/user/password-reset-applications/complete`：审核通过后提交新密码
+- `GET /api/user/desktop-tools`：读取管理员为当前用户分配的 Claude/Codex 工具配置
 
 找回密码不使用邮箱：用户先提交用户名和申请理由，管理员在 Web 端批准后，EXE 才显示“重置密码”和“再次确认重置密码”。客户端不直接连接数据库，也不包含申请表。服务端接口契约见 [SERVER-CONTRACT.md](./SERVER-CONTRACT.md)。
 
@@ -24,12 +25,14 @@
 ```text
 desktop-client/
 ├─ main.js                         Electron 窗口、IPC 和会话
-├─ preload.js                      受限的页面桥接
+├─ preload.js                      登录页桥接
+├─ tool-switcher-preload.js        工具页桥接
 ├─ src/
 │  ├─ config.js                    JSON 加载与安全校验
 │  ├─ new-api-client.js            New API 请求适配器
 │  └─ password-reset-store.js      Windows 加密申请凭证存储
-├─ ui/                             本地登录界面
+├─ src/tool-sync/                  Claude/Codex 配置同步与启动
+├─ ui/                             本地登录和工具配置界面
 ├─ test/                           Node 单元测试
 ├─ scripts/
 │  ├─ visual-check.js              固定窗口截图检查

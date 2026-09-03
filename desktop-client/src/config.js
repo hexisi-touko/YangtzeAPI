@@ -134,6 +134,7 @@ function parseConfig(raw) {
         apiPaths.passwordResetComplete || '/api/user/password-reset-applications/complete',
         'apiPaths.passwordResetComplete',
       ),
+      desktopTools: validatePath(apiPaths.desktopTools || '/api/user/desktop-tools', 'apiPaths.desktopTools'),
     },
   })
 }

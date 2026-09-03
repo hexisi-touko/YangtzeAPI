@@ -17,6 +17,7 @@
     "registrationApplicationStatus": "/api/user/application/status",
     "passwordResetApplication": "/api/user/password-reset-applications",
     "passwordResetStatus": "/api/user/password-reset-applications/status",
-    "passwordResetComplete": "/api/user/password-reset-applications/complete"
+    "passwordResetComplete": "/api/user/password-reset-applications/complete",
+    "desktopTools": "/api/user/desktop-tools"
   }
 }

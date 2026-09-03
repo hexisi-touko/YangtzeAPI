@@ -28,6 +28,7 @@ test('parseConfig normalizes the public desktop settings', () => {
   assert.equal(config.apiPaths.passwordResetApplication, '/api/user/password-reset-applications')
   assert.equal(config.apiPaths.passwordResetStatus, '/api/user/password-reset-applications/status')
   assert.equal(config.apiPaths.passwordResetComplete, '/api/user/password-reset-applications/complete')
+  assert.equal(config.apiPaths.desktopTools, '/api/user/desktop-tools')
   assert.ok(Object.isFrozen(config))
 })
 

@@ -51,6 +51,16 @@ test('login sends only username and password to the fixed login endpoint', async
   assert.equal(requests[0].options.credentials, 'include')
 })
 
+test('desktop tools endpoint returns the assigned tool payload', async () => {
+  const { client, requests } = clientWith(() => response({
+    success: true,
+    data: { tools: [{ id: 'codex-gpt', api_key: 'sk-test', api_base_url: 'https://api.example.com/v1', model: 'gpt-5.2' }] },
+  }))
+  const result = await client.getDesktopTools()
+  assert.equal(requests[0].url, 'https://api.example.com/api/user/desktop-tools')
+  assert.equal(result.tools[0].id, 'codex-gpt')
+})
+
 test('login returns the account role so the desktop shell can reject administrators', async () => {
   const { client } = clientWith(() => response({
     success: true,

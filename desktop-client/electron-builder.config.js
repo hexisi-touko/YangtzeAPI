@@ -13,6 +13,7 @@ module.exports = {
   files: [
     'main.js',
     'preload.js',
+    'tool-switcher-preload.js',
     'src/**/*.js',
     'desktop.config.json',
     'desktop.config.example.json',

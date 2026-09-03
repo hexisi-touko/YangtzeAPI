@@ -269,6 +269,44 @@ class NewApiClient {
     })
     return { success: true, message: responseMessage(payload, '密码重置成功，请返回登录') }
   }
+
+  async getUserTokens() {
+    const payload = await this.request('/api/token', { query: { p: 0, size: 10 } })
+    const items = Array.isArray(payload?.data) ? payload.data : []
+    return items
+      .filter((t) => t.status === 1)
+      .map((t) => ({ key: t.key, name: t.name || '' }))
+  }
+
+  async getAvailableModels() {
+    const payload = await this.request('/v1/models')
+    const items = Array.isArray(payload?.data) ? payload.data : []
+    return items.map((m) => typeof m === 'string' ? m : m.id).filter(Boolean)
+  }
+
+  async getDesktopTools() {
+    try {
+      const payload = await this.request(this.config.apiPaths.desktopTools)
+      const data = payload?.data && typeof payload.data === 'object' ? payload.data : payload
+      const tools = Array.isArray(data?.tools) ? data.tools : []
+      return { success: true, tools }
+    } catch (error) {
+      // 兼容尚未部署新接口的旧 New API：临时使用当前用户的第一个可用令牌。
+      if (!(error instanceof NewApiClientError) || ![404, 405].includes(error.status)) throw error
+      const tokens = await this.getUserTokens()
+      if (tokens.length === 0) throw new NewApiClientError('当前账户没有可用的 API 令牌，请联系管理员分配', { code: 'NO_TOKENS' })
+      const apiKey = tokens[0].key
+      let models = []
+      try { models = await this.getAvailableModels() } catch { /* models list is optional */ }
+      return {
+        success: true,
+        tools: [
+          { id: 'claude-code', name: 'Claude Code', api_key: apiKey, api_base_url: this.config.serverUrl, model: models.find((m) => /^claude/i.test(m)) || 'claude-sonnet-4-20250514', config_format: 'claude-settings-json' },
+          { id: 'codex-gpt', name: 'Codex (ChatGPT)', api_key: apiKey, api_base_url: `${this.config.serverUrl}/v1`, model: models.find((m) => /^(gpt|o[1-9])/i.test(m)) || 'gpt-5.6-sol', config_format: 'codex-v1' },
+        ],
+      }
+    }
+  }
 }
 
 module.exports = {

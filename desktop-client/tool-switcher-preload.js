@@ -1,0 +1,11 @@
+const { contextBridge, ipcRenderer } = require('electron')
+
+contextBridge.exposeInMainWorld('desktopTools', {
+  getState: () => ipcRenderer.invoke('desktop-tools:get-state'),
+  refresh: () => ipcRenderer.invoke('desktop-tools:refresh'),
+  enable: (toolId) => ipcRenderer.invoke('desktop-tools:enable', toolId),
+  disable: (toolId) => ipcRenderer.invoke('desktop-tools:disable', toolId),
+  launch: (toolId) => ipcRenderer.invoke('desktop-tools:launch', toolId),
+  openDashboard: () => ipcRenderer.invoke('desktop-tools:open-dashboard'),
+  logout: () => ipcRenderer.invoke('desktop-tools:logout'),
+})

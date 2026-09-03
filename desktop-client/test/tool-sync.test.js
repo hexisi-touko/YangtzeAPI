@@ -1,0 +1,42 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const os = require('node:os')
+const path = require('node:path')
+const { ClaudeAdapter } = require('../src/tool-sync/claude-adapter')
+const { CodexAdapter } = require('../src/tool-sync/codex-adapter')
+
+function tempHome() { return fs.mkdtempSync(path.join(os.tmpdir(), 'yangtze-tools-')) }
+function config(id = 'codex-gpt') { return { id, apiKey: 'sk-secret-value', apiBaseUrl: 'https://relay.example.com/v1', model: 'gpt-5.2' } }
+
+test('Claude adapter preserves unrelated settings and removes only managed env values', () => {
+  const homeDir = tempHome()
+  const adapter = new ClaudeAdapter({ homeDir, format: 'claude-settings-json' })
+  const filePath = path.join(homeDir, '.claude', 'settings.json')
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  fs.writeFileSync(filePath, JSON.stringify({ permissions: { allow: ['Read'] }, env: { OTHER: 'keep' } }))
+  adapter.apply(config('claude-code'))
+  const written = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  assert.equal(written.permissions.allow[0], 'Read')
+  assert.equal(written.env.ANTHROPIC_API_KEY, 'sk-secret-value')
+  adapter.remove()
+  const removed = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  assert.equal(removed.env.OTHER, 'keep')
+  assert.equal(removed.env.ANTHROPIC_API_KEY, undefined)
+})
+
+test('Codex adapter writes auth.json and a managed TOML block', () => {
+  const homeDir = tempHome()
+  const adapter = new CodexAdapter({ homeDir })
+  adapter.apply(config())
+  const auth = JSON.parse(fs.readFileSync(path.join(homeDir, '.codex', 'auth.json'), 'utf8'))
+  const toml = fs.readFileSync(path.join(homeDir, '.codex', 'config.toml'), 'utf8')
+  assert.equal(auth.OPENAI_API_KEY, 'sk-secret-value')
+  assert.match(toml, /model_provider = "yangtzeapi"/)
+  assert.match(toml, /base_url = "https:\/\/relay\.example\.com\/v1"/)
+  assert.match(toml, /experimental_bearer_token = "sk-secret-value"/)
+  assert.equal(adapter.getLocalState().configured, true)
+  adapter.remove()
+  assert.equal(JSON.parse(fs.readFileSync(path.join(homeDir, '.codex', 'auth.json'), 'utf8')).OPENAI_API_KEY, undefined)
+  assert.equal(adapter.getLocalState().configured, false)
+})

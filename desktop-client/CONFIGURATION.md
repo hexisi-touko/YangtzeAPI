@@ -16,9 +16,9 @@ Copy-Item desktop.config.example.json desktop.config.json
   "artifactBaseName": "API-Client",
   "logoPath": "ui/assets/logo.svg",
   "appIconPath": "build/icon.ico",
-  "serverUrl": "https://api.example.com",
+  "serverUrl": "http://127.0.0.1:3000",
   "userPagePath": "/dashboard",
-  "allowInsecureHttp": false,
+  "allowInsecureHttp": true,
   "apiPaths": {
     "status": "/api/status",
     "login": "/api/user/login",
@@ -27,7 +27,8 @@ Copy-Item desktop.config.example.json desktop.config.json
     "registrationApplicationStatus": "/api/user/application/status",
     "passwordResetApplication": "/api/user/password-reset-applications",
     "passwordResetStatus": "/api/user/password-reset-applications/status",
-    "passwordResetComplete": "/api/user/password-reset-applications/complete"
+    "passwordResetComplete": "/api/user/password-reset-applications/complete",
+    "desktopTools": "/api/user/desktop-tools"
   }
 }
 ```
@@ -43,7 +44,7 @@ Copy-Item desktop.config.example.json desktop.config.json
 | `serverUrl` | New API 站点根地址，不带 `/api` 和页面路径 |
 | `userPagePath` | 登录成功后打开的 New API 用户页面 |
 | `allowInsecureHttp` | 仅本地测试或临时内网环境使用；正式发布必须为 `false` |
-| `apiPaths` | 桌面客户端使用的固定站内接口路径 |
+| `apiPaths` | 桌面客户端使用的固定站内接口路径；`desktopTools` 用于读取管理员分配的工具配置 |
 
 找回密码使用三个接口路径：提交申请、查询审核状态、审批通过后完成密码重置。只改服务端路由时，可以分别修改 `passwordResetApplication`、`passwordResetStatus` 和 `passwordResetComplete`。
 
