@@ -7,6 +7,7 @@ const { CredentialStore } = require('./src/credential-store')
 const { ToolSyncManager } = require('./src/tool-sync/manager')
 const { ClaudeAdapter } = require('./src/tool-sync/claude-adapter')
 const { CodexAdapter } = require('./src/tool-sync/codex-adapter')
+const { GeminiAdapter } = require('./src/tool-sync/gemini-adapter')
 const { launchTool } = require('./src/tool-sync/process-launcher')
 
 const desktopConfig = loadDesktopConfig()
@@ -575,6 +576,7 @@ app.whenReady().then(async () => {
     adapters: new Map([
       ['claude-code', new ClaudeAdapter({ homeDir, launcher: launchTool })],
       ['codex-gpt', new CodexAdapter({ homeDir, launcher: launchTool })],
+      ['gemini', new GeminiAdapter({ homeDir, launcher: launchTool })],
     ]),
   })
   passwordResetStore = new PasswordResetStore({

@@ -1,6 +1,6 @@
 const { NewApiClientError } = require('../new-api-client')
 
-const TOOL_IDS = new Set(['claude-code', 'codex-gpt'])
+const TOOL_IDS = new Set(['claude-code', 'codex-gpt', 'gemini'])
 
 function normalizeServerConfig(item, allowInsecureHttp = false) {
   if (!item || typeof item !== 'object' || !TOOL_IDS.has(item.id)) return null

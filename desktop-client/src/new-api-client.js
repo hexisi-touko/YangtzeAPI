@@ -333,8 +333,9 @@ class NewApiClient {
       return {
         success: true,
         tools: [
+          { id: 'codex-gpt', name: 'Codex', api_key: apiKey, api_base_url: `${this.config.serverUrl}/v1`, model: models.find((m) => /^(gpt|o[1-9])/i.test(m)) || 'gpt-5.6-sol', config_format: 'codex-v1' },
           { id: 'claude-code', name: 'Claude Code', api_key: apiKey, api_base_url: this.config.serverUrl, model: models.find((m) => /^claude/i.test(m)) || 'claude-sonnet-4-20250514', config_format: 'claude-settings-json' },
-          { id: 'codex-gpt', name: 'Codex (ChatGPT)', api_key: apiKey, api_base_url: `${this.config.serverUrl}/v1`, model: models.find((m) => /^(gpt|o[1-9])/i.test(m)) || 'gpt-5.6-sol', config_format: 'codex-v1' },
+          { id: 'gemini', name: 'Gemini', api_key: apiKey, api_base_url: this.config.serverUrl, model: models.find((m) => /^gemini/i.test(m)) || 'gemini-2.5-pro', config_format: 'gemini-v1' },
         ],
       }
     }
