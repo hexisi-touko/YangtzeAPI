@@ -141,41 +141,49 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
-/* ================= 顶栏头部 (无侧边栏，原版主视图结构) ================= */
+/* ================= 顶栏头部 (纯白无边框 + 拖拽区 + 窗口控制) ================= */
 .app-topbar {
-  height: 56px;
+  height: 48px;
   background-color: var(--bg-topbar);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0 16px 0 20px;
   position: sticky;
   top: 0;
   z-index: 50;
   box-shadow: var(--shadow-sm);
 }
 
+.topbar-drag-region {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  -webkit-app-region: drag;
+  height: 100%;
+}
+
 .topbar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  -webkit-app-region: no-drag;
 }
 
-.brand-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #0ea5e9, #10a37f);
+.brand-avatar-box {
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  flex-shrink: 0;
 }
 
-.brand-avatar svg {
-  width: 17px;
-  height: 17px;
+.brand-custom-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .brand-titles {
@@ -185,7 +193,7 @@ body {
 }
 
 .brand-title {
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -199,7 +207,44 @@ body {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-buttons {
+  display: flex;
+  align-items: center;
+  margin-left: 6px;
+  height: 100%;
+}
+
+.win-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.win-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.win-btn:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.win-btn.win-btn-close:hover {
+  background-color: #ef4444;
+  color: #ffffff;
 }
 
 /* 主题切换按钮 */

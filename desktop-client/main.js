@@ -216,9 +216,10 @@ async function openToolSwitcherWindow() {
     minHeight: 580,
     center: true,
     show: false,
+    frame: false,
     autoHideMenuBar: true,
     backgroundColor: '#ffffff',
-    title: `${desktopConfig.productName} - AI 终端工作台`,
+    title: `${desktopConfig.productName} - AI 终端管理`,
     webPreferences: {
       preload: path.join(__dirname, 'tool-switcher-preload.js'),
       session: apiSession,
@@ -290,12 +291,18 @@ async function createLoginWindow() {
 
 function registerIpcHandlers() {
   ipcMain.on('window:minimize', (event) => {
-    requireLoginPage(event)
     BrowserWindow.fromWebContents(event.sender)?.minimize()
   })
 
+  ipcMain.on('window:maximize', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      if (win.isMaximized()) win.unmaximize()
+      else win.maximize()
+    }
+  })
+
   ipcMain.on('window:close', (event) => {
-    requireLoginPage(event)
     BrowserWindow.fromWebContents(event.sender)?.close()
   })
 

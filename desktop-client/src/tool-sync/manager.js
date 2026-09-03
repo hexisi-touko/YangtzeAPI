@@ -45,9 +45,18 @@ class ToolSyncManager {
     return [...this.adapters.entries()].map(([id, adapter]) => {
       const config = this.serverConfigs.get(id)
       const local = adapter.getLocalState()
-      return config
-        ? { ...adapter.describe(config), status: local.configured ? 'enabled' : 'disabled' }
-        : { id, name: adapter.displayName, status: 'unconfigured' }
+      if (config) {
+        return { ...adapter.describe(config), status: local.configured ? 'enabled' : 'disabled' }
+      }
+      return {
+        id,
+        name: adapter.displayName,
+        status: 'disabled',
+        model: id === 'codex-gpt' ? 'gpt-5.6-sol' : (id === 'claude-code' ? 'claude-sonnet-4-20250514' : 'gemini-2.5-pro'),
+        apiBaseUrl: 'http://127.0.0.1:3000/v1',
+        apiKey: '',
+        apiKeyMasked: '未配置',
+      }
     })
   }
 

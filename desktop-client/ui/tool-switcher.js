@@ -28,6 +28,15 @@ const modalCopyKey = document.querySelector('#modal-copy-key')
 const modalCopyUrl = document.querySelector('#modal-copy-url')
 const modalBtnSpeedtest = document.querySelector('#modal-btn-speedtest')
 
+// 窗口控制按钮绑定
+const winMinBtn = document.querySelector('#win-min-btn')
+const winMaxBtn = document.querySelector('#win-max-btn')
+const winCloseBtn = document.querySelector('#win-close-btn')
+
+if (winMinBtn) winMinBtn.addEventListener('click', () => window.desktopWindow?.minimize())
+if (winMaxBtn) winMaxBtn.addEventListener('click', () => window.desktopWindow?.maximize())
+if (winCloseBtn) winCloseBtn.addEventListener('click', () => window.desktopWindow?.close())
+
 // 主题切换
 const themeToggleBtn = document.querySelector('#theme-toggle-btn')
 const themeText = themeToggleBtn.querySelector('.theme-text')
