@@ -159,11 +159,11 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label" for="modal-provider-website">官网链接</label>
-            <input class="form-input readonly-input" id="modal-provider-website" type="text" value="https://chatgpt.com/codex" readonly tabindex="-1">
+            <input class="form-input readonly-input" id="modal-provider-website" type="text" value="http://127.0.0.1:3000" readonly tabindex="-1">
           </div>
         </div>
 
-        <!-- API Key (截图二第3行，带显示/复制，以及下方提示) -->
+        <!-- API Key (截图二第3行，默认明文显示，支持一键复制与切换隐匿) -->
         <div class="form-row">
           <div class="form-group">
             <div class="form-label-row">
@@ -174,7 +174,7 @@
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                     <circle cx="12" cy="12" r="3"/>
                   </svg>
-                  <span id="modal-eye-text">显示</span>
+                  <span id="modal-eye-text">隐藏</span>
                 </button>
                 <button id="modal-copy-key" class="action-text-link" type="button">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -185,7 +185,7 @@
                 </button>
               </div>
             </div>
-            <input class="form-input readonly-input font-mono" id="modal-provider-key" type="password" value="" placeholder="只需要填这里，下方 auth.json 会自动填充" readonly tabindex="-1">
+            <input class="form-input readonly-input font-mono" id="modal-provider-key" type="text" value="" placeholder="只需要填这里，下方 auth.json 会自动填充" readonly tabindex="-1">
             <div class="field-hint">只需要填这里，下方 auth.json 会自动填充</div>
           </div>
         </div>

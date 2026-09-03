@@ -32,7 +32,7 @@ test('Codex adapter writes auth.json and a managed TOML block', () => {
   const auth = JSON.parse(fs.readFileSync(path.join(homeDir, '.codex', 'auth.json'), 'utf8'))
   const toml = fs.readFileSync(path.join(homeDir, '.codex', 'config.toml'), 'utf8')
   assert.equal(auth.OPENAI_API_KEY, 'sk-secret-value')
-  assert.match(toml, /model_provider = "yangtzeapi"/)
+  assert.match(toml, /model_provider = "custom"/)
   assert.match(toml, /base_url = "https:\/\/relay\.example\.com\/v1"/)
   assert.match(toml, /experimental_bearer_token = "sk-secret-value"/)
   assert.equal(adapter.getLocalState().configured, true)

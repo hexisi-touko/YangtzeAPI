@@ -15,32 +15,58 @@ function validateConfig(config) {
 function tomlString(value) { return JSON.stringify(String(value)) }
 
 function mergeToml(existing, config) {
-  const withoutBlock = existing.replace(new RegExp(`${MANAGED_START}[\\s\\S]*?${MANAGED_END}\\n?`, 'g'), '')
-  const lines = withoutBlock.split(/\r?\n/)
-  let table = ''
-  const filtered = lines.filter((line) => {
-    const section = line.match(/^\s*\[([^\]]+)\]\s*$/)
-    if (section) table = section[1]
-    if (table === '' && /^\s*(model_provider|model)\s*=/.test(line)) return false
-    return true
-  })
-  while (filtered.length && filtered.at(-1) === '') filtered.pop()
-  filtered.push(
+  let text = existing.replace(new RegExp(`${MANAGED_START}[\\s\\S]*?${MANAGED_END}\\n?`, 'g'), '')
+  text = text.replace(/# BEGIN YANGTZEAPI[\s\S]*?# END YANGTZEAPI\n?/g, '')
+  text = text.replace(/\[model_providers\.(?:custom|yangtzeapi)\][\s\S]*?(?=\n\[|\Z)/g, '')
+
+  const firstSectionIdx = text.search(/^\s*\[/m)
+  let topText = firstSectionIdx >= 0 ? text.slice(0, firstSectionIdx) : text
+  let restText = firstSectionIdx >= 0 ? text.slice(firstSectionIdx) : ''
+
+  const managedKeys = new Set([
+    'model_provider',
+    'model',
+    'model_reasoning_effort',
+    'disable_response_storage',
+    'windows_wsl_setup_acknowledged',
+    'experimental_bearer_token',
+    'base_url',
+    'wire_api',
+  ])
+
+  const cleanTopLines = topText
+    .split(/\r?\n/)
+    .filter((line) => {
+      const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s*=/)
+      if (!match) return false // 过滤非合法键值行
+      if (managedKeys.has(match[1])) return false
+      return true
+    })
+    .map((l) => l.trim())
+    .filter(Boolean)
+
+  const topBlock = [
+    'model_provider = "custom"',
+    `model = ${tomlString(config.model)}`,
+    'model_reasoning_effort = "high"',
+    'disable_response_storage = true',
+    'windows_wsl_setup_acknowledged = true',
+    ...cleanTopLines,
+  ].join('\n')
+
+  const managedSection = [
     '',
     MANAGED_START,
-    'model_provider = "yangtzeapi"',
-    `model = ${tomlString(config.model)}`,
-    'model_reasoning_effort = "medium"',
-    'disable_response_storage = true',
-    '[model_providers.yangtzeapi]',
-    'name = "yangtzeapi"',
+    '[model_providers.custom]',
+    'name = "custom"',
     `base_url = ${tomlString(config.apiBaseUrl)}`,
     'wire_api = "responses"',
     'requires_openai_auth = false',
     `experimental_bearer_token = ${tomlString(config.apiKey)}`,
-    MANAGED_END
-  )
-  return `${filtered.join('\n')}\n`
+    MANAGED_END,
+  ].join('\n')
+
+  return `${topBlock}\n\n${restText.trim()}\n\n${managedSection.trim()}\n`
 }
 
 class CodexAdapter extends BaseSyncAdapter {

@@ -141,6 +141,8 @@ function openModal(tool) {
   modalProviderWebsite.value = currentAppMeta.serverUrl || 'http://127.0.0.1:3000'
 
   // 核心：把服务端分发的用户真实的 API Key 与 New API 的实际 URL 填充上去
+  modalProviderKey.type = 'text'
+  modalEyeText.textContent = '隐藏'
   modalProviderKey.value = tool.apiKey || ''
   modalProviderUrl.value = tool.apiBaseUrl || `${currentAppMeta.serverUrl || 'http://127.0.0.1:3000'}/v1`
   modalProviderModel.value = tool.model || 'gpt-5.6-sol'
@@ -196,12 +198,12 @@ document.addEventListener('keydown', (e) => {
 })
 
 modalToggleEye.addEventListener('click', () => {
-  if (modalProviderKey.type === 'password') {
-    modalProviderKey.type = 'text'
-    modalEyeText.textContent = '隐藏'
-  } else {
+  if (modalProviderKey.type === 'text') {
     modalProviderKey.type = 'password'
     modalEyeText.textContent = '显示'
+  } else {
+    modalProviderKey.type = 'text'
+    modalEyeText.textContent = '隐藏'
   }
 })
 
@@ -286,12 +288,8 @@ function renderCards(tools, appMeta = {}) {
       ? `<span class="badge-status badge-enabled">已启用</span>`
       : `<span class="badge-status badge-disabled">未启用</span>`
 
-    // 关键修正：蓝边表示当前已激活/启用的配置！
-    // 如果没有任何工具已启用，则默认激活第一个（Codex），一旦用户启用了某个工具，该工具显示蓝边
-    const anyEnabled = currentToolsList.some((t) => t.status === 'enabled')
-    const shouldHighlight = isEnabled || (!anyEnabled && tool.id === 'codex-gpt')
-
-    card.className = `provider-card ${shouldHighlight ? 'card-active' : ''}`
+    // 关键修正：蓝边严格代表“已启用”！未启用时没有任何蓝边
+    card.className = `provider-card ${isEnabled ? 'card-active' : ''}`
     card.dataset.toolId = tool.id
 
     // 主按钮文本：未启用显示「启用」，已启用显示「启动客户端」
