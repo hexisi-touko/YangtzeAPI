@@ -351,6 +351,7 @@ class NewApiClient {
     const codexModel = models.find((m) => m === 'gpt-5.6-luna') || models.find((m) => /^(gpt|o[1-9])/i.test(m)) || 'gpt-5.6-luna'
     const claudeModel = models.find((m) => /^claude/i.test(m)) || 'claude-sonnet-4-20250514'
     const geminiModel = models.find((m) => /^gemini/i.test(m)) || 'gemini-2.5-pro'
+    const kimiModel = models.find((m) => /^(moonshot|kimi)/i.test(m)) || 'moonshot-v1-8k'
 
     return {
       success: true,
@@ -363,6 +364,15 @@ class NewApiClient {
           model: codexModel,
           available_models: models,
           config_format: 'codex-v1',
+        },
+        {
+          id: 'kimi',
+          name: 'Kimi (Moonshot)',
+          api_key: apiKey,
+          api_base_url: `${serverUrl}/v1`,
+          model: kimiModel,
+          available_models: models.filter((m) => /^(moonshot|kimi)/i.test(m)),
+          config_format: 'openai-compatible',
         },
         {
           id: 'claude-code',

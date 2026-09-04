@@ -5,6 +5,7 @@ const os = require('node:os')
 const path = require('node:path')
 const { ClaudeAdapter } = require('../src/tool-sync/claude-adapter')
 const { CodexAdapter } = require('../src/tool-sync/codex-adapter')
+const { KimiAdapter } = require('../src/tool-sync/kimi-adapter')
 
 function tempHome() { return fs.mkdtempSync(path.join(os.tmpdir(), 'yangtze-tools-')) }
 function config(id = 'codex-gpt') { return { id, apiKey: 'sk-secret-value', apiBaseUrl: 'https://relay.example.com/v1', model: 'gpt-5.2' } }
@@ -38,5 +39,20 @@ test('Codex adapter writes auth.json and a managed TOML block', () => {
   assert.equal(adapter.getLocalState().configured, true)
   adapter.remove()
   assert.equal(JSON.parse(fs.readFileSync(path.join(homeDir, '.codex', 'auth.json'), 'utf8')).OPENAI_API_KEY, undefined)
+  assert.equal(adapter.getLocalState().configured, false)
+})
+
+test('Kimi adapter configures state and returns chat launch instructions', () => {
+  const homeDir = tempHome()
+  const adapter = new KimiAdapter({ homeDir })
+  assert.equal(adapter.getLocalState().configured, false)
+  adapter.apply(config('kimi'))
+  assert.equal(adapter.getLocalState().configured, true)
+  const desc = adapter.describe(config('kimi'))
+  assert.equal(desc.id, 'kimi')
+  assert.equal(desc.name, 'Kimi (Moonshot)')
+  const launch = adapter.launch()
+  assert.equal(launch.openChatWindow, true)
+  adapter.remove()
   assert.equal(adapter.getLocalState().configured, false)
 })

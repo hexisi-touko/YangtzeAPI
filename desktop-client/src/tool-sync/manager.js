@@ -1,6 +1,6 @@
 const { NewApiClientError } = require('../new-api-client')
 
-const TOOL_IDS = new Set(['claude-code', 'codex-gpt', 'gemini'])
+const TOOL_IDS = new Set(['claude-code', 'codex-gpt', 'gemini', 'kimi'])
 
 function normalizeServerConfig(item, allowInsecureHttp = false) {
   if (!item || typeof item !== 'object' || !TOOL_IDS.has(item.id)) return null
@@ -53,7 +53,7 @@ class ToolSyncManager {
         id,
         name: adapter.displayName,
         status: 'disabled',
-        model: id === 'codex-gpt' ? 'gpt-5.6-sol' : (id === 'claude-code' ? 'claude-sonnet-4-20250514' : 'gemini-2.5-pro'),
+        model: id === 'codex-gpt' ? 'gpt-5.6-luna' : (id === 'kimi' ? 'moonshot-v1-8k' : (id === 'claude-code' ? 'claude-sonnet-4-20250514' : 'gemini-2.5-pro')),
         apiBaseUrl: 'http://127.0.0.1:3000/v1',
         apiKey: '',
         apiKeyMasked: '未配置',

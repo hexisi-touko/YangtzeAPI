@@ -8,6 +8,7 @@ const { ToolSyncManager } = require('./src/tool-sync/manager')
 const { ClaudeAdapter } = require('./src/tool-sync/claude-adapter')
 const { CodexAdapter } = require('./src/tool-sync/codex-adapter')
 const { GeminiAdapter } = require('./src/tool-sync/gemini-adapter')
+const { KimiAdapter } = require('./src/tool-sync/kimi-adapter')
 const { launchTool } = require('./src/tool-sync/process-launcher')
 
 const desktopConfig = loadDesktopConfig()
@@ -18,6 +19,8 @@ const USER_SESSION_PARTITION = desktopConfig.sessionPartition
 let loginWindow = null
 let userWindow = null
 let toolSwitcherWindow = null
+let chatWindow = null
+let activeChatToolConfig = null
 let apiSession = null
 let apiClient = null
 let passwordResetStore = null
@@ -253,6 +256,51 @@ async function openToolSwitcherWindow() {
   }
 }
 
+async function openChatWindow(toolConfig) {
+  activeChatToolConfig = toolConfig
+  if (chatWindow && !chatWindow.isDestroyed()) {
+    chatWindow.show()
+    chatWindow.focus()
+    return
+  }
+
+  chatWindow = new BrowserWindow({
+    width: 960,
+    height: 700,
+    minWidth: 740,
+    minHeight: 520,
+    center: true,
+    show: false,
+    frame: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#ffffff',
+    title: `${desktopConfig.productName} - Kimi 智能助手`,
+    webPreferences: {
+      preload: path.join(__dirname, 'chat-preload.js'),
+      session: apiSession,
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      spellcheck: false,
+      navigateOnDragDrop: false,
+    },
+  })
+
+  chatWindow.webContents.on('will-navigate', (event) => event.preventDefault())
+  chatWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  chatWindow.once('ready-to-show', () => chatWindow?.show())
+  chatWindow.on('closed', () => { chatWindow = null })
+
+  try {
+    await chatWindow.loadFile(path.join(__dirname, 'ui', 'chat.html'))
+  } catch {
+    if (chatWindow && !chatWindow.isDestroyed()) chatWindow.destroy()
+    chatWindow = null
+    throw new NewApiClientError('Kimi 对话窗口加载失败', { code: 'PAGE_LOAD_ERROR' })
+  }
+}
+
 async function createLoginWindow() {
   loginWindow = new BrowserWindow({
     width: LOGIN_WINDOW_WIDTH,
@@ -359,7 +407,11 @@ function registerIpcHandlers() {
       const result = await apiClient.getDesktopTools()
       const config = result.tools.find((item) => item?.id === toolId)
       if (!config) return { success: false, message: '该工具尚未分配配置', code: 'TOOL_UNCONFIGURED' }
-      return toolSyncManager.enable(toolId, config)
+      const res = toolSyncManager.enable(toolId, config)
+      if (toolId === 'kimi') {
+        await openChatWindow(config)
+      }
+      return res
     } catch (error) {
       return publicError(error, '启用工具失败，未修改本地配置')
     }
@@ -367,14 +419,29 @@ function registerIpcHandlers() {
 
   ipcMain.handle('desktop-tools:disable', (event, toolId) => {
     requireToolSwitcherPage(event)
-    try { return toolSyncManager.disable(toolId) } catch (error) {
+    try {
+      if (toolId === 'kimi' && chatWindow && !chatWindow.isDestroyed()) {
+        chatWindow.close()
+      }
+      return toolSyncManager.disable(toolId)
+    } catch (error) {
       return publicError(error, '禁用工具失败')
     }
   })
 
-  ipcMain.handle('desktop-tools:launch', (event, toolId) => {
+  ipcMain.handle('desktop-tools:launch', async (event, toolId) => {
     requireToolSwitcherPage(event)
     try {
+      if (toolId === 'kimi') {
+        const result = await apiClient.getDesktopTools()
+        const config = result.tools.find((item) => item?.id === toolId)
+        await openChatWindow(config)
+        return {
+          success: true,
+          launched: true,
+          message: '已打开 Kimi 智能助手对话窗口',
+        }
+      }
       const adapter = toolSyncManager.requireAdapter(toolId)
       const launch = adapter.launch()
       return {
@@ -384,6 +451,16 @@ function registerIpcHandlers() {
       }
     } catch (error) {
       return publicError(error, '启动工具失败')
+    }
+  })
+
+  ipcMain.handle('chat:get-config', () => {
+    return {
+      success: true,
+      config: activeChatToolConfig,
+      account: currentAccount,
+      serverUrl: desktopConfig.serverUrl,
+      productName: desktopConfig.productName,
     }
   })
 
@@ -584,6 +661,7 @@ app.whenReady().then(async () => {
       ['claude-code', new ClaudeAdapter({ homeDir, launcher: launchTool })],
       ['codex-gpt', new CodexAdapter({ homeDir, launcher: launchTool })],
       ['gemini', new GeminiAdapter({ homeDir, launcher: launchTool })],
+      ['kimi', new KimiAdapter({ homeDir, launcher: launchTool })],
     ]),
   })
   passwordResetStore = new PasswordResetStore({

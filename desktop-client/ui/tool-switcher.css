@@ -516,6 +516,12 @@ html[data-theme="dark"] .message-banner.error {
   color: var(--gemini-blue);
 }
 
+.logo-kimi {
+  background-color: rgba(23, 131, 255, 0.08);
+  border: 1px solid rgba(23, 131, 255, 0.25);
+  color: #1783ff;
+}
+
 .provider-info-col {
   min-width: 0;
   flex: 1;

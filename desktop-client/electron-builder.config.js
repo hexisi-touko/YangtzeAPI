@@ -14,6 +14,7 @@ module.exports = {
     'main.js',
     'preload.js',
     'tool-switcher-preload.js',
+    'chat-preload.js',
     'src/**/*.js',
     'desktop.config.json',
     'desktop.config.example.json',
