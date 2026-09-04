@@ -46,7 +46,14 @@ let currentAppMeta = {}
 let currentViewingTool = null
 let hideMessageTimer = null
 
-// 官方品牌风格的内联标志，避免依赖外部网络资源。
+// Agent 图标使用随应用打包的本地资源，避免依赖外部网络。
+const ICON_ASSETS = {
+  'codex-gpt': 'assets/gpt-icon.png',
+  'claude-code': 'assets/claude-icon.png',
+  'gemini': 'assets/gemini-icon.png',
+}
+
+// SVG 作为资源加载失败时的兼容回退。
 const ICONS = {
   'codex-gpt': `
     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -131,7 +138,10 @@ function openModal(tool) {
 
   // 顶部大图标
   modalBigIconBox.className = `modal-big-icon-box ${tool.id === 'codex-gpt' ? 'logo-codex' : (tool.id === 'claude-code' ? 'logo-claude' : 'logo-gemini')}`
-  modalBigIconBox.innerHTML = ICONS[tool.id] || ICONS['codex-gpt']
+  const iconAsset = ICON_ASSETS[tool.id]
+  modalBigIconBox.innerHTML = iconAsset
+    ? `<img class="agent-icon-image" src="${iconAsset}" alt="${tool.name} 图标">`
+    : (ICONS[tool.id] || ICONS['codex-gpt'])
 
   // 表单字段填充
   modalProviderName.value = tool.name
@@ -286,17 +296,20 @@ function renderCards(tools, appMeta = {}) {
 
     // 确定 Logo class 与 SVG
     let logoClass = 'logo-codex'
-    let logoSvg = ICONS['codex-gpt']
-    const providerAddress = tool.apiBaseUrl || appMeta.serverUrl || '未配置服务地址'
+    let logoAsset = ICON_ASSETS['codex-gpt']
+    // 卡片副标题展示官网/服务端地址，不展示协议请求路径（例如 /v1）。
+    const providerAddress = (appMeta.serverUrl || tool.apiBaseUrl || '未配置服务地址')
+      .replace(/\/v1\/?$/i, '')
+      .replace(/\/+$/, '') || '未配置服务地址'
     let subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
 
     if (tool.id === 'claude-code') {
       logoClass = 'logo-claude'
-      logoSvg = ICONS['claude-code']
+      logoAsset = ICON_ASSETS['claude-code']
       subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
     } else if (tool.id === 'gemini') {
       logoClass = 'logo-gemini'
-      logoSvg = ICONS['gemini']
+      logoAsset = ICON_ASSETS['gemini']
       subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
     }
 
@@ -325,7 +338,7 @@ function renderCards(tools, appMeta = {}) {
         </div>
 
         <div class="provider-logo-box ${logoClass}">
-          ${logoSvg}
+          <img class="agent-icon-image" src="${logoAsset}" alt="${tool.name} 图标">
         </div>
 
         <div class="provider-info-col">

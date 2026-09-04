@@ -489,6 +489,14 @@ html[data-theme="dark"] .message-banner.error {
   height: 30px;
 }
 
+.provider-logo-box .agent-icon-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
 /* 各工具专属 Logo 样式 */
 .logo-codex {
   background-color: var(--openai-green-bg);
@@ -804,6 +812,14 @@ html[data-theme="dark"] .message-banner.error {
 .modal-big-icon-box svg {
   width: 36px;
   height: 36px;
+}
+
+.modal-big-icon-box .agent-icon-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
 }
 
 .form-row {
