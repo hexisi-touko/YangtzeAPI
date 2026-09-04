@@ -131,6 +131,13 @@ func ApproveUserApplication(applicationId int, reviewerId int, reviewComment str
 			return err
 		}
 		approvedUser.Status = common.UserStatusEnabled
+		if approvedUser.Quota <= 0 {
+			if common.QuotaForNewUser > 0 {
+				approvedUser.Quota = common.QuotaForNewUser
+			} else {
+				approvedUser.Quota = 50000000
+			}
+		}
 		if err := approvedUser.UpdateWithTx(tx, false); err != nil {
 			return err
 		}
