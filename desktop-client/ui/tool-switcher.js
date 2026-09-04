@@ -46,7 +46,7 @@ let currentAppMeta = {}
 let currentViewingTool = null
 let hideMessageTimer = null
 
-// SVG 图标定义 (OpenAI, Claude, Gemini)
+// 官方品牌风格的内联标志，避免依赖外部网络资源。
 const ICONS = {
   'codex-gpt': `
     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -55,12 +55,12 @@ const ICONS = {
   `,
   'claude-code': `
     <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+      <path d="M12 1.5c.7 0 1.3.45 1.52 1.1l1.45 4.36 4.36-1.45a1.6 1.6 0 1 1 1.02 3.03l-4.36 1.45 4.36 1.45a1.6 1.6 0 1 1-1.02 3.03l-4.36-1.45-1.45 4.36a1.6 1.6 0 1 1-3.03 0l-1.45-4.36-4.36 1.45a1.6 1.6 0 1 1-1.02-3.03l4.36-1.45-4.36-1.45a1.6 1.6 0 1 1 1.02-3.03l4.36 1.45 1.45-4.36A1.6 1.6 0 0 1 12 1.5Z"/>
     </svg>
   `,
   'gemini': `
     <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 24c-.2 0-.4-.1-.5-.2C9.2 21.2 7 18 5 15.5 3 13 1 10.5.2 8.5c-.4-1.2.2-2.5 1.5-2.9C3 5.2 4.5 5.5 5.5 6.5l4.5 4.5V2c0-1.1.9-2 2-2s2 .9 2 2v9l4.5-4.5c1-1 2.5-1.3 3.8-.9 1.3.4 1.9 1.7 1.5 2.9-.8 2-2.8 4.5-4.8 7-2 2.5-4.2 5.7-6.3 8.3-.3.1-.5.2-.7.2z"/>
+      <path d="M12 1.5c.45 4.95 2.55 7.05 7.5 7.5-4.95.45-7.05 2.55-7.5 7.5-.45-4.95-2.55-7.05-7.5-7.5 4.95-.45 7.05-2.55 7.5-7.5Zm7.35 14.3c.27 2.2.95 2.88 3.15 3.15-2.2.27-2.88.95-3.15 3.15-.27-2.2-.95-2.88-3.15-3.15 2.2-.27 2.88-.95 3.15-3.15Z"/>
     </svg>
   `,
 }
@@ -137,16 +137,32 @@ function openModal(tool) {
   modalProviderName.value = tool.name
   modalProviderNote.value = `${currentAppMeta.account?.username || '用户'} · 专属账号`
 
-  // 官网链接：严格按用户要求，统一指向当前 New API 服务端点
+  // 官网链接：统一指向当前的 New API 服务端点
   modalProviderWebsite.value = currentAppMeta.serverUrl || 'http://127.0.0.1:3000'
 
-  // 核心：把服务端分发的用户真实的 API Key 与 New API 的实际 URL 填充上去
+  // 核心：真实 API Key 与真实 API 端点
   modalProviderKey.type = 'text'
   modalEyeText.textContent = '隐藏'
   modalProviderKey.value = tool.apiKey || ''
   modalProviderUrl.value = tool.apiBaseUrl || `${currentAppMeta.serverUrl || 'http://127.0.0.1:3000'}/v1`
-  modalProviderModel.value = tool.model || 'gpt-5.6-sol'
-  modalMappingModel.textContent = tool.model || 'gpt-5.6-sol'
+  modalProviderModel.value = tool.model || 'gpt-5.6-luna'
+  modalMappingModel.textContent = tool.model || 'gpt-5.6-luna'
+
+  // 动态渲染模型映射列表（根据 URL 接口返回的真实可用模型动态生成）
+  const mappingBox = document.querySelector('.mapping-preview-box')
+  if (mappingBox) {
+    const modelsList = (tool.availableModels && tool.availableModels.length > 0)
+      ? tool.availableModels
+      : [tool.model || 'gpt-5.6-luna']
+
+    mappingBox.innerHTML = modelsList.map((m) => `
+      <div class="mapping-row-item">
+        <span class="mapping-green-dot"></span>
+        <span class="mapping-model-id font-mono">${m}</span>
+        <span class="mapping-sync-tag">${m === tool.model ? '当前默认 · 已同步' : '已映射可用'}</span>
+      </div>
+    `).join('')
+  }
 
   // 动态同步高级选项里的 auth.json (JSON) 预览区
   const modalAuthJson = document.querySelector('#modal-auth-json')
@@ -155,17 +171,18 @@ function openModal(tool) {
     modalAuthJson.value = JSON.stringify(authObj, null, 2)
   }
 
-  // 动态同步高级选项里的 config.toml (TOML) 预览区
+  // 动态同步高级选项里的 config.toml (TOML) 预览区 (与本地写入格式 100% 严格一致)
   const modalConfigToml = document.querySelector('#modal-config-toml')
   if (modalConfigToml) {
     const tomlLines = [
-      'model_provider = "yangtzeapi"',
-      `model = "${tool.model || 'gpt-5.6-sol'}"`,
-      'model_reasoning_effort = "medium"',
+      'model_provider = "custom"',
+      `model = "${tool.model || 'gpt-5.6-luna'}"`,
+      'model_reasoning_effort = "high"',
       'disable_response_storage = true',
+      'windows_wsl_setup_acknowledged = true',
       '',
-      '[model_providers.yangtzeapi]',
-      'name = "yangtzeapi"',
+      '[model_providers.custom]',
+      'name = "custom"',
       `base_url = "${tool.apiBaseUrl || (currentAppMeta.serverUrl + '/v1')}"`,
       'wire_api = "responses"',
       'requires_openai_auth = false',
@@ -270,16 +287,17 @@ function renderCards(tools, appMeta = {}) {
     // 确定 Logo class 与 SVG
     let logoClass = 'logo-codex'
     let logoSvg = ICONS['codex-gpt']
-    let subtitleHtml = '账号会随 Codex CLI 当前登录变化'
+    const providerAddress = tool.apiBaseUrl || appMeta.serverUrl || '未配置服务地址'
+    let subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
 
     if (tool.id === 'claude-code') {
       logoClass = 'logo-claude'
       logoSvg = ICONS['claude-code']
-      subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${tool.apiBaseUrl || appMeta.serverUrl}</a>`
+      subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
     } else if (tool.id === 'gemini') {
       logoClass = 'logo-gemini'
       logoSvg = ICONS['gemini']
-      subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${tool.apiBaseUrl || appMeta.serverUrl}</a>`
+      subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
     }
 
     // 状态徽章：只有真正处于 enabled 时才是已启用

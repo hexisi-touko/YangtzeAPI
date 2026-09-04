@@ -348,12 +348,40 @@ class NewApiClient {
     try { models = await this.getAvailableModels() } catch { /* models list is optional */ }
 
     const serverUrl = this.config.serverUrl || 'http://127.0.0.1:3000'
+    const codexModel = models.find((m) => m === 'gpt-5.6-luna') || models.find((m) => /^(gpt|o[1-9])/i.test(m)) || 'gpt-5.6-luna'
+    const claudeModel = models.find((m) => /^claude/i.test(m)) || 'claude-sonnet-4-20250514'
+    const geminiModel = models.find((m) => /^gemini/i.test(m)) || 'gemini-2.5-pro'
+
     return {
       success: true,
       tools: [
-        { id: 'codex-gpt', name: 'Codex', api_key: apiKey, api_base_url: `${serverUrl}/v1`, model: models.find((m) => /^(gpt|o[1-9])/i.test(m)) || 'gpt-5.6-sol', config_format: 'codex-v1' },
-        { id: 'claude-code', name: 'Claude Code', api_key: apiKey, api_base_url: serverUrl, model: models.find((m) => /^claude/i.test(m)) || 'claude-sonnet-4-20250514', config_format: 'claude-settings-json' },
-        { id: 'gemini', name: 'Gemini', api_key: apiKey, api_base_url: serverUrl, model: models.find((m) => /^gemini/i.test(m)) || 'gemini-2.5-pro', config_format: 'gemini-v1' },
+        {
+          id: 'codex-gpt',
+          name: 'Codex (ChatGPT)',
+          api_key: apiKey,
+          api_base_url: `${serverUrl}/v1`,
+          model: codexModel,
+          available_models: models,
+          config_format: 'codex-v1',
+        },
+        {
+          id: 'claude-code',
+          name: 'Claude Code',
+          api_key: apiKey,
+          api_base_url: serverUrl,
+          model: claudeModel,
+          available_models: models.filter((m) => /^claude/i.test(m)),
+          config_format: 'claude-settings-json',
+        },
+        {
+          id: 'gemini',
+          name: 'Gemini',
+          api_key: apiKey,
+          api_base_url: serverUrl,
+          model: geminiModel,
+          available_models: models.filter((m) => /^gemini/i.test(m)),
+          config_format: 'gemini-v1',
+        },
       ],
     }
   }

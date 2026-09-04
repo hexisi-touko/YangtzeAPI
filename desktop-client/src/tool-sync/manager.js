@@ -11,6 +11,7 @@ function normalizeServerConfig(item, allowInsecureHttp = false) {
     apiBaseUrl: item.api_base_url,
     model: item.model,
     format: item.config_format,
+    availableModels: Array.isArray(item.available_models) ? item.available_models : [],
   }
   for (const field of ['apiKey', 'apiBaseUrl', 'model']) {
     if (typeof config[field] !== 'string' || config[field].trim() === '') return null

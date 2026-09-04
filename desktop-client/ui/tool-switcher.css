@@ -143,7 +143,7 @@ body {
 
 /* ================= 顶栏头部 (纯白无边框 + 拖拽区 + 窗口控制) ================= */
 .app-topbar {
-  height: 52px;
+  height: 60px;
   background-color: var(--bg-topbar);
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -172,8 +172,8 @@ body {
 }
 
 .brand-avatar-box {
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,8 +181,8 @@ body {
 }
 
 .brand-custom-logo {
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
 }
 
@@ -193,13 +193,13 @@ body {
 }
 
 .brand-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .brand-sub {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--openai-green);
 }
@@ -474,8 +474,8 @@ html[data-theme="dark"] .message-banner.error {
 }
 
 .provider-logo-box {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -485,8 +485,8 @@ html[data-theme="dark"] .message-banner.error {
 }
 
 .provider-logo-box svg {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
 }
 
 /* 各工具专属 Logo 样式 */
@@ -538,6 +538,12 @@ html[data-theme="dark"] .message-banner.error {
   color: #3b82f6;
   text-decoration: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.provider-desc-link:hover {
+  color: var(--blue-primary-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .badge-status {
