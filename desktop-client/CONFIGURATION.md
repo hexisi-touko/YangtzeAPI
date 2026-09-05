@@ -67,16 +67,13 @@ Markdown 预览与 EXE 使用同一图片文件，但真正控制 EXE Logo 路�
 只构建到 `dist`：
 
 ```powershell
-npm run check
-npm test
-npm run visual:check
-npm run dist:win
+npm run build:production
 ```
 
-完成全部检查并复制到当前 Windows 用户桌面：
+正式构建要求 HTTPS 服务地址且 `allowInsecureHttp=false`，拒绝回环地址。本地测试构建：
 
 ```powershell
-npm run release:local
+npm run build:local
 ```
 
 脚本最后会输出两个桌面 EXE 的 SHA-256 哈希。

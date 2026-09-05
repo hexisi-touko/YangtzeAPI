@@ -16,7 +16,10 @@
     "predist:win": "npm run icon:generate",
     "dist:win": "electron-builder --config electron-builder.config.js --win",
     "dist:local-test": "npm run icon:generate:local-test && electron-builder --config electron-builder.local-test.config.js --win",
-    "release:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-local.ps1"
+    "dev:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1",
+    "build:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-client.ps1 -Mode LocalTest",
+    "build:production": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-client.ps1 -Mode Production",
+    "release:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-client.ps1 -Mode LocalTest"
   },
   "devDependencies": {
     "electron": "44.1.0",
