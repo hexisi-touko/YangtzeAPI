@@ -108,6 +108,11 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 			}
 		}
 
+		jsonData, err = relaycommon.NormalizeKimiToolSchemas(jsonData, request.Model)
+		if err != nil {
+			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
+		}
+
 		logger.LogDebug(c, "requestBody: %s", jsonData)
 		body, closer, err := relaycommon.NewOutboundJSONBody(jsonData)
 		if err != nil {
