@@ -1,5 +1,6 @@
 const fs = require('node:fs')
 const path = require('node:path')
+const { parseEnv } = require('node:util')
 const { BaseSyncAdapter, atomicWrite, maskSecret, readTextIfExists } = require('./base-sync')
 
 function validateConfig(config) {
@@ -46,10 +47,19 @@ class ClaudeAdapter extends BaseSyncAdapter {
   get displayName() { return 'Claude Code' }
   get configPaths() { return [this.format === 'claude-env' ? this.envPath : this.settingsPath] }
 
-  getLocalState() {
+  getLocalState(config) {
     const filePath = this.configPaths[0]
     if (!fs.existsSync(filePath)) return { configured: false }
-    return { configured: true }
+    try {
+      const text = readTextIfExists(filePath)
+      const env = this.format === 'claude-env' ? parseEnv(text) : JSON.parse(text).env
+      const fields = { ANTHROPIC_API_KEY: 'apiKey', ANTHROPIC_BASE_URL: 'apiBaseUrl', ANTHROPIC_MODEL: 'model' }
+      const configured = Object.entries(fields).every(([key, field]) =>
+        typeof env?.[key] === 'string' && env[key].trim() !== '' && (!config || env[key] === config[field]))
+      return { configured }
+    } catch {
+      return { configured: false }
+    }
   }
 
   apply(config) {
@@ -93,6 +103,7 @@ class ClaudeAdapter extends BaseSyncAdapter {
       id: this.toolId,
       name: this.displayName,
       model: config.model,
+      availableModels: config.availableModels || [],
       apiBaseUrl: config.apiBaseUrl,
       apiKey: config.apiKey,
       apiKeyMasked: maskSecret(config.apiKey),

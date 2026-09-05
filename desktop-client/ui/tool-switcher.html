@@ -48,10 +48,10 @@
       </button>
 
       <!-- 服务网关状态指示 -->
-      <div class="gateway-pill" title="当前连接的 YangtzeAPI 服务端点">
-        <span class="gateway-dot"></span>
-        <span id="server-url-display">http://127.0.0.1:3000</span>
-      </div>
+      <details class="gateway-details">
+        <summary class="gateway-pill" title="连接详情"><span class="gateway-dot"></span><span>连接</span></summary>
+        <div class="gateway-popover"><span class="form-label">服务地址</span><span id="server-url-display">http://127.0.0.1:3000</span></div>
+      </details>
 
       <!-- 用户信息 -->
       <div class="user-pill">
@@ -97,11 +97,11 @@
   <!-- 主内容区：不分区！像 cc-switch 原版一样整齐排列各个 Agent 的单账号卡片！ -->
   <main class="content-body">
     <div class="list-heading-row">
-      <div class="list-title">已绑定的 AI 终端账号</div>
-      <div class="list-subtitle">单 Agent 专属单账号 · 管理员预置授权 · 点击「启用」即写配置并唤起应用</div>
+      <div class="list-title">AI 终端</div>
+      <div id="terminal-count" class="list-subtitle">已绑定账号</div>
     </div>
 
-    <!-- 供应商卡片列表 (codex, claude code, gemini 等原版风格卡片列表) -->
+    <!-- 供应商卡片列表 (codex, claude code 等原版风格卡片列表) -->
     <div id="provider-cards-list" class="cards-list">
       <!-- 卡片将由 JS 动态渲染 -->
     </div>
@@ -111,7 +111,7 @@
        供应商配置详情弹窗 (Modal)
        100% 严格对齐用户提供的两张表单截图！带顶部居中圆角大Logo，包含所有输入框，全只读防篡改
        ========================================================================= -->
-  <div id="config-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+  <div id="config-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-dialog-title" aria-hidden="true" inert>
     <div class="modal-dialog">
       <!-- 弹窗顶栏：左侧带返回箭头，居中标题"添加新供应商 / 供应商配置"，右侧关闭按钮 -->
       <div class="modal-header">
@@ -123,7 +123,7 @@
             </svg>
           </button>
           <span class="modal-title-text" id="modal-dialog-title">供应商配置</span>
-          <span class="modal-badge-readonly">只读锁定</span>
+          <span class="modal-badge-readonly">管理端配置</span>
         </div>
         <button id="modal-close-btn" class="modal-close-btn" type="button" title="关闭">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -133,12 +133,17 @@
         </button>
       </div>
 
-      <!-- 弹窗滚动主体：结构与顺序 100% 对齐截图二与截图三 -->
+      <div class="config-tabs" role="tablist" aria-label="供应商配置">
+        <button id="tab-connection" class="config-tab" role="tab" aria-selected="true" aria-controls="panel-connection" type="button" data-tab="connection">连接</button>
+        <button id="tab-models" class="config-tab" role="tab" aria-selected="false" aria-controls="panel-models" tabindex="-1" type="button" data-tab="models">模型</button>
+        <button id="tab-advanced" class="config-tab" role="tab" aria-selected="false" aria-controls="panel-advanced" tabindex="-1" type="button" data-tab="advanced">高级</button>
+      </div>
+      <!-- 弹窗滚动主体 -->
       <div class="modal-body">
         <!-- 顶部居中大图标 (cc-switch 原版 BasicFormFields 结构) -->
         <div class="modal-icon-center-wrap">
           <div class="modal-big-icon-box" id="modal-big-icon-box">
-            <!-- 动态放置 OpenAI / Claude / Gemini 官方图标 -->
+            <!-- 动态放置 OpenAI / Claude 官方图标 -->
           </div>
         </div>
 
@@ -186,7 +191,6 @@
               </div>
             </div>
             <input class="form-input readonly-input font-mono" id="modal-provider-key" type="text" value="" placeholder="只需要填这里，下方 auth.json 会自动填充" readonly tabindex="-1">
-            <div class="field-hint">只需要填这里，下方 auth.json 会自动填充</div>
           </div>
         </div>
 
@@ -222,10 +226,6 @@
               </button>
             </div>
             <!-- 黄色提示框 (截图二原版) -->
-            <div class="yellow-notice-alert">
-              <span class="notice-emoji">💡</span>
-              <span>填写兼容 OpenAI Response 格式的服务端点地址</span>
-            </div>
           </div>
         </div>
 
@@ -234,7 +234,7 @@
           <div class="form-group">
             <label class="form-label" for="modal-provider-model">默认模型</label>
             <div class="input-with-icon-box">
-              <input class="form-input readonly-input font-mono" id="modal-provider-model" type="text" value="gpt-5.6-sol" readonly tabindex="-1">
+              <select class="form-input font-mono" id="modal-provider-model" aria-label="默认模型"></select>
               <div class="input-trailing-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -243,7 +243,6 @@
                 </svg>
               </div>
             </div>
-            <div class="field-hint">Codex 默认请求的模型，随时可改，无需等待预设更新。留空且配置了模型映射时，默认使用映射第一行。</div>
           </div>
         </div>
 
@@ -261,22 +260,22 @@
             <div class="form-group">
               <label class="form-label" for="modal-upstream-format">上游格式</label>
               <div class="select-wrapper">
-                <input class="form-input readonly-input" id="modal-upstream-format" type="text" value="Responses（原生）" readonly tabindex="-1">
+                <input class="form-input readonly-input" id="modal-upstream-format" type="text" value="Responses" readonly tabindex="-1">
                 <svg class="select-chevron-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
               </div>
               <div class="field-hint">
-                供应商原生为 Responses API 就选 Responses（直连，不转换格式）；使用 Chat Completions 协议就选 Chat；供应商只提供原生 Anthropic Messages 协议就选 Anthropic Messages。Chat 与 Anthropic Messages 均需开启路由接管才能转换为 Responses。
+                协议适配由管理端渠道配置。
               </div>
             </div>
 
             <!-- 模型映射 -->
             <div class="form-group" style="margin-top: 16px;">
               <div class="mapping-title-row">
-                <label class="form-label" style="margin-bottom: 0;">模型映射</label>
+                <label class="form-label" style="margin-bottom: 0;">模型列表</label>
                 <div class="mapping-actions-btns">
-                  <button class="btn-mapping-action disabled" type="button" disabled>
+                  <button id="modal-fetch-models" class="btn-mapping-action" type="button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="7 10 12 15 17 10"/>
@@ -284,27 +283,13 @@
                     </svg>
                     <span>获取模型列表</span>
                   </button>
-                  <button class="btn-mapping-action disabled" type="button" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="5" x2="12" y2="19"/>
-                      <line x1="5" y1="12" x2="19" y2="12"/>
-                    </svg>
-                    <span>添加模型</span>
-                  </button>
                 </div>
               </div>
-              <div class="field-hint" style="margin-top: 6px;">
-                生成 Codex model_catalog.json，让 /model 命令显示这些第三方模型名；表中条目按填写内容原样保存。修改后需要重启 Codex 才能刷新模型列表。
-              </div>
+              <input id="modal-model-search" class="form-input" type="search" placeholder="搜索模型" aria-label="搜索模型">
+              <p id="modal-model-status" class="field-hint" role="status" aria-live="polite"></p>
 
               <!-- 映射列表预览 -->
-              <div class="mapping-preview-box">
-                <div class="mapping-row-item">
-                  <span class="mapping-green-dot"></span>
-                  <span class="mapping-model-id font-mono" id="modal-mapping-model">gpt-5.6-sol</span>
-                  <span class="mapping-sync-tag">已同步至本地配置</span>
-                </div>
-              </div>
+              <div class="mapping-preview-box" aria-label="可选模型"></div>
             </div>
 
             <!-- 自定义 User-Agent (新增截图 1:1 复刻) -->
@@ -390,16 +375,18 @@ experimental_bearer_token = "sk-your-api-key-here"</textarea>
         <div class="modal-footer-left">
           <span class="readonly-status-tag">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            管理端预分配 · 终端只读保护
+            <span id="modal-config-status">管理端预分配</span>
           </span>
         </div>
         <div class="modal-footer-right">
-          <button id="modal-btn-close" class="btn-modal-close" type="button">确定</button>
+          <button id="modal-btn-close" class="btn-modal-close" type="button">关闭</button>
+          <button id="modal-apply-models" class="btn-primary-blue" type="button">应用</button>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="tool-switcher-preview.js"></script>
   <script src="tool-switcher.js"></script>
 </body>
 </html>

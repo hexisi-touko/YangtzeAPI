@@ -14,7 +14,6 @@ module.exports = {
     'main.js',
     'preload.js',
     'tool-switcher-preload.js',
-    'chat-preload.js',
     'src/**/*.js',
     'desktop.config.json',
     'desktop.config.example.json',
@@ -23,6 +22,7 @@ module.exports = {
     'ui/*.js',
     'ui/assets/*.svg',
     'ui/assets/*.png',
+    '!ui/assets/gemini-icon.png',
   ],
   win: {
     target: ['nsis', 'portable'],

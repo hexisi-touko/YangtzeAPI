@@ -1,6 +1,6 @@
 {
   "name": "api-relay-desktop-client",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "author": "API Relay Operator",
   "description": "Configurable Windows desktop client for New API authentication and registration review",
@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "start:local-test": "electron main.local-test.js",
-    "check": "node --check main.js && node --check main.local-test.js && node --check preload.js && node --check tool-switcher-preload.js && node --check chat-preload.js && node --check electron-builder.config.js && node --check electron-builder.local-test.config.js && node --check src/config.js && node --check src/credential-store.js && node --check src/new-api-client.js && node --check src/password-reset-store.js && node --check src/tool-sync/base-sync.js && node --check src/tool-sync/claude-adapter.js && node --check src/tool-sync/codex-adapter.js && node --check src/tool-sync/gemini-adapter.js && node --check src/tool-sync/kimi-adapter.js && node --check src/tool-sync/manager.js && node --check src/tool-sync/process-launcher.js && node --check scripts/generate-icon.js && node --check scripts/generate-local-test-icon.js && node --check scripts/visual-check.js && node --check ui/login.js && node --check ui/tool-switcher.js && node --check ui/chat.js",
+    "check": "node --check main.js && node --check main.local-test.js && node --check preload.js && node --check tool-switcher-preload.js && node --check electron-builder.config.js && node --check electron-builder.local-test.config.js && node --check src/config.js && node --check src/credential-store.js && node --check src/new-api-client.js && node --check src/password-reset-store.js && node --check src/tool-sync/base-sync.js && node --check src/tool-sync/claude-adapter.js && node --check src/tool-sync/codex-adapter.js && node --check src/tool-sync/manager.js && node --check src/tool-sync/process-launcher.js && node --check scripts/generate-icon.js && node --check scripts/generate-local-test-icon.js && node --check scripts/visual-check.js && node --check ui/login.js && node --check ui/tool-switcher.js",
     "test": "node --test test/*.test.js",
     "visual:check": "electron scripts/visual-check.js",
     "icon:generate": "electron scripts/generate-icon.js",
@@ -21,5 +21,8 @@
   "devDependencies": {
     "electron": "44.1.0",
     "electron-builder": "26.15.3"
+  },
+  "dependencies": {
+    "@iarna/toml": "^2.2.5"
   }
 }

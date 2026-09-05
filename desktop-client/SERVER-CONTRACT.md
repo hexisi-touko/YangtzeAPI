@@ -125,7 +125,17 @@ GET /api/user/desktop-tools
 }
 ```
 
-`id` 目前只支持 `claude-code` 和 `codex-gpt`。`api_base_url` 必须是无账号密码、无片段的 HTTP(S) 地址；正式环境使用 HTTPS。`config_format` 用于兼容不同客户端版本的本地配置格式。服务端撤销分配后应从 `tools` 中移除该项，客户端不会继续使用旧的内存配置。
+`id` 支持 `claude-code` 和 `codex-gpt`。Kimi 是 Codex 可选模型，不再作为独立工具。`api_base_url` 必须是无账号密码、无片段的 HTTP(S) 地址；正式环境使用 HTTPS。`config_format` 用于兼容不同客户端版本的本地配置格式。
+
+### Agent 模型选择
+
+Claude Code 和 Codex 均可选择默认模型。后续 Agent 需要实现并注册适配器才能使用通用模型管理。当前发现接口固定为登录网关的 `/v1/models`，不同工具令牌的授权范围由服务端控制；不同 `api_base_url` 不会自动切换模型发现网关，也不能单凭地址实现渠道隔离。模型出现在列表中不等于对应 Agent 协议已兼容。
+
+客户端通过主进程使用工具配置中的 `api_key` 调用当前 New API 的 `GET /v1/models`，不使用面板 PAT 或登录 Cookie。返回标准 `data: [{ id: "kimi-k3" }]`，可以预先在工具配置中提供 `available_models` 字符串数组。应用前重新获取模型列表并验证选择仍在授权范围内。
+
+模型目录只控制显示和请求 ID。`kimi-k3` 必须在管理端配置为实际可路由模型；如上游 ID 不同，在渠道中维护模型映射。客户端不保存上游供应商密钥，不修改渠道或计费配置。Codex 对接的地址必须接受 `/v1/responses`，仅支持 Chat 的上游需要管理端配置转换。
+
+只保存默认模型，按服务器、账号存于客户端 `model-preferences.json`。获取模型会直接把全部授权模型写入 Codex 的 `yangtze-model-catalog.json` 并更新 `config.toml`，无需勾选或另行应用模型清单；修改默认模型后点击应用。旧版 `selectedModels` 不再限制目录。Codex 在启动时读取目录，需要重启刷新。未知模型使用保守的文本与函数工具配置，不声明图片、搜索、推理强度等未验证能力。能力及长上下文适配仍须按上游逐项验证。
 
 ## 提交找回密码申请
 

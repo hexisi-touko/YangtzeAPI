@@ -70,7 +70,7 @@ class NewApiClient {
     return url.toString()
   }
 
-  async request(apiPath, { method = 'GET', body, query } = {}) {
+  async request(apiPath, { method = 'GET', body, query, apiKey } = {}) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs)
     let response
@@ -78,15 +78,15 @@ class NewApiClient {
       Accept: 'application/json',
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     }
-    if (this.accessToken) {
-      headers.Authorization = `Bearer ${this.accessToken}`
+    if (apiKey || this.accessToken) {
+      headers.Authorization = `Bearer ${apiKey || this.accessToken}`
     }
     try {
       response = await this.session.fetch(this.buildUrl(apiPath, query), {
         method,
         body: body === undefined ? undefined : JSON.stringify(body),
         headers,
-        credentials: 'include',
+        credentials: apiKey ? 'omit' : 'include',
         cache: 'no-store',
         redirect: 'error',
         signal: controller.signal,
@@ -320,10 +320,12 @@ class NewApiClient {
     return result
   }
 
-  async getAvailableModels() {
-    const payload = await this.request('/v1/models')
-    const items = Array.isArray(payload?.data) ? payload.data : []
-    return items.map((m) => typeof m === 'string' ? m : m.id).filter(Boolean)
+  async getAvailableModels(apiKey) {
+    requireValue(apiKey, 'API 令牌', 4096)
+    const payload = await this.request('/v1/models', { apiKey })
+    if (!Array.isArray(payload?.data)) throw new NewApiClientError('模型列表格式无效', { code: 'INVALID_RESPONSE' })
+    return [...new Set(payload.data.map((m) => typeof m === 'string' ? m : m?.id)
+      .filter((id) => typeof id === 'string' && id.length > 0 && id.length <= 256 && !/[\s\x00-\x1f]/.test(id)))]
   }
 
   async getDesktopTools() {
@@ -345,20 +347,18 @@ class NewApiClient {
     }
 
     let models = []
-    try { models = await this.getAvailableModels() } catch { /* models list is optional */ }
+    try { models = await this.getAvailableModels(apiKey) } catch { /* Keep configuration visible when discovery is unavailable. */ }
 
     const serverUrl = this.config.serverUrl || 'http://127.0.0.1:3000'
-    const codexModel = models.find((m) => m === 'gpt-5.6-luna') || models.find((m) => /^(gpt|o[1-9])/i.test(m)) || 'gpt-5.6-luna'
+    const codexModel = models[0] || 'gpt-5.6-luna'
     const claudeModel = models.find((m) => /^claude/i.test(m)) || 'claude-sonnet-4-20250514'
-    const geminiModel = models.find((m) => /^gemini/i.test(m)) || 'gemini-2.5-pro'
-    const kimiModel = models.find((m) => /^(moonshot|kimi)/i.test(m)) || 'moonshot-v1-8k'
 
     return {
       success: true,
       tools: [
         {
           id: 'codex-gpt',
-          name: 'Codex (ChatGPT)',
+          name: 'Codex',
           api_key: apiKey,
           api_base_url: `${serverUrl}/v1`,
           model: codexModel,
@@ -366,31 +366,13 @@ class NewApiClient {
           config_format: 'codex-v1',
         },
         {
-          id: 'kimi',
-          name: 'Kimi (Moonshot)',
-          api_key: apiKey,
-          api_base_url: `${serverUrl}/v1`,
-          model: kimiModel,
-          available_models: models.filter((m) => /^(moonshot|kimi)/i.test(m)),
-          config_format: 'openai-compatible',
-        },
-        {
           id: 'claude-code',
           name: 'Claude Code',
           api_key: apiKey,
           api_base_url: serverUrl,
           model: claudeModel,
-          available_models: models.filter((m) => /^claude/i.test(m)),
+          available_models: models,
           config_format: 'claude-settings-json',
-        },
-        {
-          id: 'gemini',
-          name: 'Gemini',
-          api_key: apiKey,
-          api_base_url: serverUrl,
-          model: geminiModel,
-          available_models: models.filter((m) => /^gemini/i.test(m)),
-          config_format: 'gemini-v1',
         },
       ],
     }

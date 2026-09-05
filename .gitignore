@@ -20,3 +20,5 @@ Thumbs.db
 /idle-routing.json
 /occupy-a.json
 /result-*.json
+/.playwright-cli/
+/output/playwright/

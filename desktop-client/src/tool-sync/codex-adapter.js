@@ -1,129 +1,139 @@
 const fs = require('node:fs')
 const path = require('node:path')
+const TOML = require('@iarna/toml')
 const { BaseSyncAdapter, atomicWrite, maskSecret, readTextIfExists } = require('./base-sync')
 
 const MANAGED_START = '# BEGIN YANGTZEAPI MANAGED CODEX'
 const MANAGED_END = '# END YANGTZEAPI MANAGED CODEX'
+const MANAGED_KEYS = ['model', 'model_provider', 'model_catalog_json', 'model_reasoning_effort', 'model_context_window', 'model_auto_compact_token_limit', 'model_supports_reasoning_summaries']
 
-function validateConfig(config) {
-  if (!config || typeof config !== 'object') throw new Error('Codex 配置为空')
-  for (const field of ['apiKey', 'apiBaseUrl', 'model']) {
-    if (typeof config[field] !== 'string' || config[field].trim() === '') throw new Error(`Codex 配置缺少 ${field}`)
-  }
+function parseConfig(text) { return text.trim() ? TOML.parse(text) : {} }
+
+// Only advertise documented levels; arbitrary aliases need upstream capability metadata.
+function reasoningProfile(model) {
+  if (['kimi-k3', 'kimi-k3-256k'].includes(model)) return { levels: ['low', 'high', 'max'], default: 'max' }
+  if (['gpt-5.6-terra', 'gpt-5.6-luna'].includes(model)) return { levels: ['none', 'low', 'medium', 'high', 'xhigh', 'max'], default: 'medium' }
+  if (model === 'gpt-5.5') return { levels: ['none', 'low', 'medium', 'high', 'xhigh'], default: 'medium' }
+  return { levels: [], default: null }
 }
 
-function tomlString(value) { return JSON.stringify(String(value)) }
+function buildCatalog(models, providerName = 'API') {
+  return { models: models.map((slug, priority) => ({
+    slug, display_name: slug.startsWith('kimi-') ? `Kimi · ${slug.slice(5)}` : slug,
+    description: providerName, priority, visibility: 'list', supported_in_api: true,
+    default_reasoning_level: reasoningProfile(slug).default,
+    supported_reasoning_levels: reasoningProfile(slug).levels.map((effort) => ({ effort, description: effort })),
+    shell_type: 'unified_exec', supports_reasoning_summaries: false,
+    supports_reasoning_summary_parameter: false, default_reasoning_summary: 'none',
+    support_verbosity: false, default_verbosity: null, apply_patch_tool_type: null,
+    truncation_policy: { mode: 'bytes', limit: 10000 },
+    input_modalities: ['text'], experimental_supported_tools: [],
+    supports_parallel_tool_calls: false, prefer_websockets: false,
+    base_instructions: 'You are a coding assistant. Inspect the workspace, use the provided tools to complete the user task, and verify your changes.',
+    model_messages: { instructions_template: 'You are a coding assistant. Inspect the workspace, use the provided tools to complete the user task, and verify your changes.' },
+  })) }
+}
 
 function mergeToml(existing, config) {
-  let text = existing.replace(new RegExp(`${MANAGED_START}[\\s\\S]*?${MANAGED_END}\\n?`, 'g'), '')
-  text = text.replace(/# BEGIN YANGTZEAPI[\s\S]*?# END YANGTZEAPI\n?/g, '')
-  text = text.replace(/\[model_providers\.(?:custom|yangtzeapi)\][\s\S]*?(?=\n\[|\Z)/g, '')
-
-  const firstSectionIdx = text.search(/^\s*\[/m)
-  let topText = firstSectionIdx >= 0 ? text.slice(0, firstSectionIdx) : text
-  let restText = firstSectionIdx >= 0 ? text.slice(firstSectionIdx) : ''
-
-  const managedKeys = new Set([
-    'model_provider',
-    'model',
-    'model_reasoning_effort',
-    'disable_response_storage',
-    'windows_wsl_setup_acknowledged',
-    'experimental_bearer_token',
-    'base_url',
-    'wire_api',
-  ])
-
-  const cleanTopLines = topText
-    .split(/\r?\n/)
-    .filter((line) => {
-      const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s*=/)
-      if (!match) return false // 过滤非合法键值行
-      if (managedKeys.has(match[1])) return false
-      return true
-    })
-    .map((l) => l.trim())
-    .filter(Boolean)
-
-  const topBlock = [
-    'model_provider = "custom"',
-    `model = ${tomlString(config.model)}`,
-    'model_reasoning_effort = "high"',
-    'disable_response_storage = true',
-    'windows_wsl_setup_acknowledged = true',
-    ...cleanTopLines,
-  ].join('\n')
-
-  const managedSection = [
-    '',
-    MANAGED_START,
-    '[model_providers.custom]',
-    'name = "custom"',
-    `base_url = ${tomlString(config.apiBaseUrl)}`,
-    'wire_api = "responses"',
-    'requires_openai_auth = false',
-    `experimental_bearer_token = ${tomlString(config.apiKey)}`,
-    MANAGED_END,
-  ].join('\n')
-
-  return `${topBlock}\n\n${restText.trim()}\n\n${managedSection.trim()}\n`
+  const doc = parseConfig(existing)
+  const profile = reasoningProfile(config.model)
+  const previousEffort = doc.model === config.model ? doc.model_reasoning_effort : null
+  for (const key of MANAGED_KEYS) delete doc[key]
+  doc.model_provider = 'custom'
+  doc.model = config.model
+  doc.model_catalog_json = config.catalogPath
+  const effort = profile.levels.includes(previousEffort) ? previousEffort : profile.default
+  if (effort) doc.model_reasoning_effort = effort
+  doc.model_supports_reasoning_summaries = false
+  doc.model_providers ||= {}
+  doc.model_providers.custom = {
+    name: config.providerName || 'API', base_url: config.apiBaseUrl, wire_api: 'responses',
+    requires_openai_auth: false, experimental_bearer_token: config.apiKey,
+    supports_websockets: false,
+  }
+  return `${MANAGED_START}\n${TOML.stringify(doc)}\n${MANAGED_END}\n`
 }
 
 class CodexAdapter extends BaseSyncAdapter {
   constructor(options) {
     super(options)
-    this.authPath = path.join(this.homeDir, '.codex', 'auth.json')
-    this.configPath = path.join(this.homeDir, '.codex', 'config.toml')
+    const directory = options.codexHome || path.join(this.homeDir, '.codex')
+    this.authPath = path.join(directory, 'auth.json')
+    this.configPath = path.join(directory, 'config.toml')
+    this.catalogPath = path.join(directory, 'yangtze-model-catalog.json')
+    this.backupPath = path.join(directory, 'yangtze-config-backup.json')
   }
 
   get toolId() { return 'codex-gpt' }
-  get displayName() { return 'Codex (ChatGPT)' }
-  get configPaths() { return [this.authPath, this.configPath] }
+  get displayName() { return 'Codex' }
+  get configPaths() { return [this.authPath, this.configPath, this.catalogPath] }
 
-  getLocalState() {
-    if (!fs.existsSync(this.configPath)) return { configured: false }
-    const content = readTextIfExists(this.configPath)
-    return { configured: content.includes(MANAGED_START) }
+  getLocalState(config) {
+    const text = readTextIfExists(this.configPath)
+    const doc = parseConfig(text)
+    const provider = doc.model_providers?.custom
+    const matches = !config || (doc.model === config.model && provider?.base_url === config.apiBaseUrl && provider?.experimental_bearer_token === config.apiKey && provider?.name === (config.providerName || 'API'))
+    return { configured: text.includes(MANAGED_START) && matches, model: doc.model }
   }
 
   apply(config) {
-    validateConfig(config)
-    let auth = {}
-    const existing = readTextIfExists(this.authPath)
-    if (existing.trim()) {
-      try { auth = JSON.parse(existing) } catch { throw new Error('Codex auth.json 格式无法解析') }
+    if (!config || ['apiKey', 'apiBaseUrl', 'model'].some((key) => typeof config[key] !== 'string' || !config[key].trim())) {
+      throw new Error('Codex 配置不完整')
     }
-    auth.OPENAI_API_KEY = config.apiKey
-    atomicWrite(this.authPath, `${JSON.stringify(auth, null, 2)}\n`)
-    atomicWrite(this.configPath, mergeToml(readTextIfExists(this.configPath), config))
+    const models = [...new Set(config.availableModels || [config.model])]
+    if (!models.includes(config.model)) throw new Error('默认模型必须包含在授权模型中')
+    const existing = readTextIfExists(this.configPath)
+    const doc = parseConfig(existing)
+    const oldAuth = readTextIfExists(this.authPath)
+    const auth = oldAuth.trim() ? JSON.parse(oldAuth) : {}
+    const catalog = JSON.stringify(buildCatalog(models, config.providerName), null, 2)
+    const toml = mergeToml(existing, { ...config, catalogPath: this.catalogPath })
+    const snapshots = [...this.configPaths, this.backupPath].map((file) => ({ file, exists: fs.existsSync(file), text: readTextIfExists(file) }))
+    try {
+      if (!fs.existsSync(this.backupPath)) {
+        const keys = Object.fromEntries(MANAGED_KEYS.filter((key) => Object.hasOwn(doc, key)).map((key) => [key, doc[key]]))
+        atomicWrite(this.backupPath, JSON.stringify({ keys, custom: doc.model_providers?.custom, apiKey: auth.OPENAI_API_KEY }))
+      }
+      auth.OPENAI_API_KEY = config.apiKey
+      atomicWrite(this.catalogPath, `${catalog}\n`)
+      atomicWrite(this.authPath, `${JSON.stringify(auth, null, 2)}\n`)
+      atomicWrite(this.configPath, toml)
+    } catch (error) {
+      for (const snapshot of snapshots) {
+        if (snapshot.exists) atomicWrite(snapshot.file, snapshot.text)
+        else fs.rmSync(snapshot.file, { force: true })
+      }
+      throw error
+    }
   }
 
   remove() {
-    if (fs.existsSync(this.authPath)) {
-      try {
-        const auth = JSON.parse(readTextIfExists(this.authPath))
-        delete auth.OPENAI_API_KEY
-        atomicWrite(this.authPath, `${JSON.stringify(auth, null, 2)}\n`)
-      } catch {
-        // 忽略旧文件格式错误
-      }
+    const existing = readTextIfExists(this.configPath)
+    if (!existing.includes(MANAGED_START)) return
+    const doc = parseConfig(existing)
+    const backupText = readTextIfExists(this.backupPath)
+    const backup = backupText ? JSON.parse(backupText) : { keys: {} }
+    for (const key of MANAGED_KEYS) delete doc[key]
+    Object.assign(doc, backup.keys)
+    if (doc.model_providers) {
+      delete doc.model_providers.custom
+      if (backup.custom) doc.model_providers.custom = backup.custom
     }
-    if (fs.existsSync(this.configPath)) {
-      const text = readTextIfExists(this.configPath).replace(new RegExp(`\\n?${MANAGED_START}[\\s\\S]*?${MANAGED_END}\\n?`, 'g'), '\n')
-      atomicWrite(this.configPath, text)
-    }
+    const auth = JSON.parse(readTextIfExists(this.authPath) || '{}')
+    delete auth.OPENAI_API_KEY
+    if (backup.apiKey !== undefined) auth.OPENAI_API_KEY = backup.apiKey
+    atomicWrite(this.configPath, TOML.stringify(doc))
+    atomicWrite(this.authPath, `${JSON.stringify(auth, null, 2)}\n`)
+    fs.rmSync(this.catalogPath, { force: true })
+    fs.rmSync(this.backupPath, { force: true })
   }
 
   describe(config) {
-    return {
-      id: this.toolId,
-      name: this.displayName,
-      model: config.model,
-      apiBaseUrl: config.apiBaseUrl,
-      apiKey: config.apiKey,
-      apiKeyMasked: maskSecret(config.apiKey),
-    }
+    return { id: this.toolId, name: this.displayName, model: config.model,
+      providerName: config.providerName || 'API',
+      apiBaseUrl: config.apiBaseUrl, apiKey: config.apiKey, apiKeyMasked: maskSecret(config.apiKey),
+      availableModels: config.availableModels || [] }
   }
 }
 
-module.exports = { CodexAdapter, mergeToml }
+module.exports = { CodexAdapter, mergeToml, buildCatalog }

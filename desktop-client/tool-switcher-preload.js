@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('desktopWindow', {
 contextBridge.exposeInMainWorld('desktopTools', {
   getState: () => ipcRenderer.invoke('desktop-tools:get-state'),
   refresh: () => ipcRenderer.invoke('desktop-tools:refresh'),
+  getModels: (toolId) => ipcRenderer.invoke('desktop-tools:get-models', toolId),
+  applyModels: (toolId, selection) => ipcRenderer.invoke('desktop-tools:apply-models', toolId, selection),
   enable: (toolId) => ipcRenderer.invoke('desktop-tools:enable', toolId),
   disable: (toolId) => ipcRenderer.invoke('desktop-tools:disable', toolId),
   launch: (toolId) => ipcRenderer.invoke('desktop-tools:launch', toolId),

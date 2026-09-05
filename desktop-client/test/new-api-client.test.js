@@ -61,6 +61,23 @@ test('desktop tools endpoint returns the assigned tool payload', async () => {
   assert.equal(result.tools[0].id, 'codex-gpt')
 })
 
+test('model discovery uses the API token, excludes session credentials and deduplicates IDs', async () => {
+  const { client, requests } = clientWith(() => response({ data: [{ id: 'kimi-k3' }, { id: 'kimi-k3' }, { id: 'gpt-5.6-terra' }, { id: 12 }, null] }))
+  client.accessToken = 'panel-token'
+  assert.deepEqual(await client.getAvailableModels('sk-model-token'), ['kimi-k3', 'gpt-5.6-terra'])
+  assert.equal(requests[0].options.headers.Authorization, 'Bearer sk-model-token')
+  assert.equal(requests[0].options.credentials, 'omit')
+  await assert.rejects(() => client.getAvailableModels(''))
+  assert.equal(requests.length, 1)
+})
+
+test('model discovery surfaces denied and malformed responses', async () => {
+  const denied = clientWith(() => response({ message: 'Token expired' }, 401))
+  await assert.rejects(() => denied.client.getAvailableModels('sk-key'), /Token expired/)
+  const malformed = clientWith(() => response({ models: [] }))
+  await assert.rejects(() => malformed.client.getAvailableModels('sk-key'), /模型列表格式无效/)
+})
+
 test('login returns the account role so the desktop shell can reject administrators', async () => {
   const { client } = clientWith(() => response({
     success: true,

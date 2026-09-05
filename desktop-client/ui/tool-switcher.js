@@ -20,13 +20,58 @@ const modalProviderWebsite = document.querySelector('#modal-provider-website')
 const modalProviderKey = document.querySelector('#modal-provider-key')
 const modalProviderUrl = document.querySelector('#modal-provider-url')
 const modalProviderModel = document.querySelector('#modal-provider-model')
-const modalMappingModel = document.querySelector('#modal-mapping-model')
+const fetchModelsButton = document.querySelector('#modal-fetch-models')
+const applyModelsButton = document.querySelector('#modal-apply-models')
+const modelSearch = document.querySelector('#modal-model-search')
+const modelStatus = document.querySelector('#modal-model-status')
+let draftModels = []
+let defaultModel = ''
+let modalRevision = 0
+let applyingModels = false
+let fetchingModels = false
 
 const modalToggleEye = document.querySelector('#modal-toggle-eye')
 const modalEyeText = document.querySelector('#modal-eye-text')
 const modalCopyKey = document.querySelector('#modal-copy-key')
 const modalCopyUrl = document.querySelector('#modal-copy-url')
 const modalBtnSpeedtest = document.querySelector('#modal-btn-speedtest')
+
+// Move existing fields intact so their values and event bindings survive tab changes.
+const modalBody = document.querySelector('.modal-body')
+const connectionFields = [...modalBody.children].slice(0, 5)
+const modelFields = [modalProviderModel.closest('.form-row'), fetchModelsButton.closest('.form-group')]
+const advancedFields = [document.querySelector('.advanced-card-content'), document.querySelector('#modal-auth-json').closest('.form-row'), document.querySelector('#modal-config-toml').closest('.form-row')]
+for (const [name, fields] of Object.entries({ connection: connectionFields, models: modelFields, advanced: advancedFields })) {
+  const panel = document.createElement('section')
+  panel.id = `panel-${name}`
+  panel.className = 'config-tab-panel'
+  panel.setAttribute('role', 'tabpanel')
+  panel.setAttribute('aria-labelledby', `tab-${name}`)
+  panel.hidden = name !== 'connection'
+  fields.forEach((field) => panel.append(field))
+  modalBody.append(panel)
+}
+document.querySelector('.advanced-card').remove()
+let modalOpener = null
+function selectConfigTab(name) {
+  document.querySelectorAll('.config-tab').forEach((tab) => {
+    const selected = tab.dataset.tab === name
+    tab.setAttribute('aria-selected', String(selected))
+    tab.tabIndex = selected ? 0 : -1
+    document.querySelector(`#panel-${tab.dataset.tab}`).hidden = !selected
+  })
+  modalBody.scrollTop = 0
+}
+document.querySelectorAll('.config-tab').forEach((tab, index, tabs) => {
+  tab.addEventListener('click', () => selectConfigTab(tab.dataset.tab))
+  tab.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
+    selectConfigTab(tabs[next].dataset.tab)
+    tabs[next].focus()
+  })
+})
 
 // 窗口控制按钮绑定
 const winMinBtn = document.querySelector('#win-min-btn')
@@ -50,7 +95,6 @@ let hideMessageTimer = null
 const ICON_ASSETS = {
   'codex-gpt': 'assets/gpt-icon.png',
   'claude-code': 'assets/claude-icon.png',
-  'gemini': 'assets/gemini-icon.png',
 }
 
 // SVG 作为资源加载失败时的兼容回退。
@@ -63,17 +107,6 @@ const ICONS = {
   'claude-code': `
     <svg viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 1.5c.7 0 1.3.45 1.52 1.1l1.45 4.36 4.36-1.45a1.6 1.6 0 1 1 1.02 3.03l-4.36 1.45 4.36 1.45a1.6 1.6 0 1 1-1.02 3.03l-4.36-1.45-1.45 4.36a1.6 1.6 0 1 1-3.03 0l-1.45-4.36-4.36 1.45a1.6 1.6 0 1 1-1.02-3.03l4.36-1.45-4.36-1.45a1.6 1.6 0 1 1 1.02-3.03l4.36 1.45 1.45-4.36A1.6 1.6 0 0 1 12 1.5Z"/>
-    </svg>
-  `,
-  'gemini': `
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 1.5c.45 4.95 2.55 7.05 7.5 7.5-4.95.45-7.05 2.55-7.5 7.5-.45-4.95-2.55-7.05-7.5-7.5 4.95-.45 7.05-2.55 7.5-7.5Zm7.35 14.3c.27 2.2.95 2.88 3.15 3.15-2.2.27-2.88.95-3.15 3.15-.27-2.2-.95-2.88-3.15-3.15 2.2-.27 2.88-.95 3.15-3.15Z"/>
-    </svg>
-  `,
-  'kimi': `
-    <svg viewBox="0 0 24 25" fill="currentColor">
-      <path d="M21.7202 0.939941C22.9502 0.939941 23.9502 1.93994 23.9502 3.16994C23.9502 4.39994 22.9502 5.39994 21.7202 5.39994H19.7502C19.6002 5.39994 19.4902 5.27994 19.4902 5.13994V3.16994C19.4902 1.93994 20.4902 0.939941 21.7202 0.939941Z" fill="#1783FF"></path>
-      <path d="M9.39 13.9501L17.82 5.59012C17.98 5.43012 17.89 5.12012 17.68 5.12012H13.14C13.14 5.12012 13.04 5.14012 13 5.18012L3.92 14.1901C3.78 14.3301 3.57 14.2101 3.57 13.9801V5.39012C3.57 5.24012 3.47 5.12012 3.35 5.12012H0.219999C0.0999993 5.12012 0 5.24012 0 5.39012V23.9201C0 24.0701 0.0999993 24.1901 0.219999 24.1901H3.35C3.47 24.1901 3.57 24.0701 3.57 23.9201V20.1401C3.57 20.0601 3.6 19.9801 3.65 19.9301L6.47 17.1401C6.54 17.0701 6.63 17.0601 6.71 17.1101L14.24 22.6501C15.47 23.4801 16.85 23.9901 18.25 24.1401C18.37 24.1501 18.48 24.0301 18.48 23.8701V20.3101C18.48 20.1701 18.4 20.0601 18.29 20.0501C17.47 19.9201 16.66 19.6001 15.94 19.1101L9.42 14.3901C9.28 14.3001 9.27 14.0701 9.39 13.9501Z" fill="#1783FF"></path>
     </svg>
   `,
 }
@@ -139,11 +172,14 @@ function setBusy(button, busy, loadingText = '处理中…') {
 
 // ================= 弹窗控制 (Modal) =================
 function openModal(tool) {
+  modalOpener = document.activeElement
+  selectConfigTab('connection')
+  modalRevision += 1
   currentViewingTool = tool
   modalDialogTitle.textContent = `供应商配置 - ${tool.name}`
 
   // 顶部大图标
-  modalBigIconBox.className = `modal-big-icon-box ${tool.id === 'codex-gpt' ? 'logo-codex' : (tool.id === 'kimi' ? 'logo-kimi' : (tool.id === 'claude-code' ? 'logo-claude' : 'logo-gemini'))}`
+  modalBigIconBox.className = `modal-big-icon-box ${tool.id === 'codex-gpt' ? 'logo-codex' : 'logo-claude'}`
   const iconAsset = ICON_ASSETS[tool.id]
   modalBigIconBox.innerHTML = iconAsset
     ? `<img class="agent-icon-image" src="${iconAsset}" alt="${tool.name} 图标">`
@@ -161,24 +197,19 @@ function openModal(tool) {
   modalEyeText.textContent = '隐藏'
   modalProviderKey.value = tool.apiKey || ''
   modalProviderUrl.value = tool.apiBaseUrl || `${currentAppMeta.serverUrl || 'http://127.0.0.1:3000'}/v1`
-  modalProviderModel.value = tool.model || 'gpt-5.6-luna'
-  modalMappingModel.textContent = tool.model || 'gpt-5.6-luna'
-
-  // 动态渲染模型映射列表（根据 URL 接口返回的真实可用模型动态生成）
-  const mappingBox = document.querySelector('.mapping-preview-box')
-  if (mappingBox) {
-    const modelsList = (tool.availableModels && tool.availableModels.length > 0)
-      ? tool.availableModels
-      : [tool.model || 'gpt-5.6-luna']
-
-    mappingBox.innerHTML = modelsList.map((m) => `
-      <div class="mapping-row-item">
-        <span class="mapping-green-dot"></span>
-        <span class="mapping-model-id font-mono">${m}</span>
-        <span class="mapping-sync-tag">${m === tool.model ? '当前默认 · 已同步' : '已映射可用'}</span>
-      </div>
-    `).join('')
-  }
+  const editable = Array.isArray(tool.availableModels)
+  defaultModel = tool.model || ''
+  draftModels = [...new Set(tool.availableModels || [])]
+  modelSearch.value = ''
+  modelSearch.hidden = !editable
+  fetchModelsButton.hidden = !editable
+  fetchModelsButton.disabled = false
+  fetchingModels = false
+  applyModelsButton.hidden = !editable
+  modalProviderModel.disabled = !editable
+  modelStatus.textContent = editable ? `${draftModels.length} 个授权模型` : ''
+  document.querySelector('#modal-config-status').textContent = editable ? '模型可选' : '管理端预分配'
+  renderModelSelection()
 
   // 动态同步高级选项里的 auth.json (JSON) 预览区
   const modalAuthJson = document.querySelector('#modal-auth-json')
@@ -193,9 +224,6 @@ function openModal(tool) {
     const tomlLines = [
       'model_provider = "custom"',
       `model = "${tool.model || 'gpt-5.6-luna'}"`,
-      'model_reasoning_effort = "high"',
-      'disable_response_storage = true',
-      'windows_wsl_setup_acknowledged = true',
       '',
       '[model_providers.custom]',
       'name = "custom"',
@@ -208,13 +236,126 @@ function openModal(tool) {
   }
 
   configModal.classList.add('visible')
+  configModal.inert = false
+  document.querySelector('.app-topbar').inert = true
+  document.querySelector('.content-body').inert = true
   configModal.setAttribute('aria-hidden', 'false')
+  document.querySelector('#tab-connection').focus()
+  renderModelSelection()
 }
 
 function closeModal() {
+  if (applyingModels || fetchingModels) return
+  modalRevision += 1
   configModal.classList.remove('visible')
+  configModal.inert = true
+  document.querySelector('.app-topbar').inert = false
+  document.querySelector('.content-body').inert = false
   configModal.setAttribute('aria-hidden', 'true')
+  modalOpener?.focus()
 }
+
+function renderModelSelection() {
+  const editable = Array.isArray(currentViewingTool?.availableModels)
+  const box = document.querySelector('.mapping-preview-box')
+  box.replaceChildren()
+  const allModels = draftModels
+  for (const id of allModels.filter((id) => id.toLowerCase().includes(modelSearch.value.toLowerCase()))) {
+    const row = document.createElement('div')
+    row.className = 'mapping-row-item'
+    const name = document.createElement('span')
+    name.className = 'mapping-model-id font-mono'
+    name.textContent = id.startsWith('kimi-') ? `Kimi · ${id.slice(5)} · ${id}` : id
+    const status = document.createElement('span')
+    status.className = 'mapping-sync-tag'
+    status.textContent = id === defaultModel ? '默认' : ''
+    row.append(name, status)
+    box.append(row)
+  }
+  if (!box.children.length) box.textContent = modelSearch.value ? '没有匹配的模型' : '暂无模型'
+  modalProviderModel.replaceChildren()
+  for (const id of [...new Set([...draftModels, defaultModel].filter(Boolean))]) {
+    const option = document.createElement('option')
+    option.value = id
+    option.textContent = id.startsWith('kimi-') ? `Kimi · ${id.slice(5)} (${id})` : id
+    modalProviderModel.append(option)
+  }
+  modalProviderModel.value = defaultModel
+  modalProviderModel.disabled = applyingModels || fetchingModels || !editable
+  applyModelsButton.disabled = applyingModels || fetchingModels || !draftModels.includes(defaultModel)
+  const preview = document.querySelector('#modal-config-toml')
+  if (editable && preview) {
+    preview.value = [
+      'model_provider = "custom"', `model = ${JSON.stringify(defaultModel)}`,
+      '# model_catalog_json: ' + draftModels.join(', '),
+      'model_supports_reasoning_summaries = false', '', '[model_providers.custom]',
+      `name = ${JSON.stringify(currentViewingTool.providerName || 'API')}`, `base_url = ${JSON.stringify(currentViewingTool.apiBaseUrl)}`,
+      'wire_api = "responses"', 'requires_openai_auth = false', 'supports_websockets = false',
+      `experimental_bearer_token = ${JSON.stringify(currentViewingTool.apiKey)}`,
+    ].join('\n')
+  }
+}
+
+modalProviderModel.addEventListener('change', () => {
+  defaultModel = modalProviderModel.value
+  renderModelSelection()
+})
+modelSearch.addEventListener('input', renderModelSelection)
+
+fetchModelsButton.addEventListener('click', async () => {
+  const revision = modalRevision
+  fetchingModels = true
+  renderModelSelection()
+  fetchModelsButton.disabled = true
+  modelStatus.textContent = '正在获取模型…'
+  try {
+    const result = await window.desktopTools.getModels(currentViewingTool.id)
+    if (revision !== modalRevision) return
+    if (!result.success) throw new Error(result.message || '获取模型失败')
+    draftModels = result.models
+    defaultModel = result.model
+    renderCards(result.tools, currentAppMeta)
+    currentViewingTool = result.tools.find((tool) => tool.id === currentViewingTool.id)
+    modelStatus.textContent = `已同步 ${draftModels.length} 个模型 · 重启 Codex 后生效`
+    document.querySelector('#modal-config-status').textContent = '全部模型已同步'
+    renderModelSelection()
+  } catch (error) {
+    if (revision === modalRevision) modelStatus.textContent = error.message || '获取模型失败'
+  } finally {
+    if (revision === modalRevision) {
+      fetchingModels = false
+      fetchModelsButton.disabled = false
+      renderModelSelection()
+    }
+  }
+})
+
+applyModelsButton.addEventListener('click', async () => {
+  const revision = modalRevision
+  applyingModels = true
+  renderModelSelection()
+  applyModelsButton.disabled = true
+  fetchModelsButton.disabled = true
+  modelStatus.textContent = '正在应用…'
+  try {
+    const result = await window.desktopTools.applyModels(currentViewingTool.id, { model: defaultModel })
+    if (revision !== modalRevision) return
+    if (!result.success) throw new Error(result.message || '应用失败')
+    renderCards(result.tools, currentAppMeta)
+    currentViewingTool = result.tools.find((tool) => tool.id === currentViewingTool.id)
+    draftModels = currentViewingTool.availableModels
+    modelStatus.textContent = result.message
+    document.querySelector('#modal-config-status').textContent = '已应用 · 等待重启 Codex'
+  } catch (error) {
+    if (revision === modalRevision) modelStatus.textContent = error.message || '应用失败'
+  } finally {
+    applyingModels = false
+    if (revision === modalRevision) {
+      fetchModelsButton.disabled = false
+      renderModelSelection()
+    }
+  }
+})
 
 modalBackBtn.addEventListener('click', closeModal)
 modalCloseBtn.addEventListener('click', closeModal)
@@ -225,6 +366,13 @@ configModal.addEventListener('click', (e) => {
 })
 
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' && configModal.classList.contains('visible')) {
+    const items = [...configModal.querySelectorAll('button, input, select, textarea, [tabindex]')].filter((item) => !item.disabled && item.tabIndex >= 0 && item.getClientRects().length)
+    const first = items[0]
+    const last = items.at(-1)
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
+  }
   if (e.key === 'Escape' && configModal.classList.contains('visible')) {
     closeModal()
   }
@@ -280,6 +428,7 @@ modalBtnSpeedtest.addEventListener('click', async () => {
 function renderCards(tools, appMeta = {}) {
   currentToolsList = tools || []
   currentAppMeta = appMeta
+  document.querySelector('#terminal-count').textContent = `${currentToolsList.length} 个终端 · ${currentToolsList.filter((tool) => tool.status === 'enabled').length} 个已启用`
 
   // 顶栏信息
   if (appMeta.account?.username) {
@@ -313,14 +462,6 @@ function renderCards(tools, appMeta = {}) {
       logoClass = 'logo-claude'
       logoAsset = ICON_ASSETS['claude-code']
       subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
-    } else if (tool.id === 'gemini') {
-      logoClass = 'logo-gemini'
-      logoAsset = ICON_ASSETS['gemini']
-      subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
-    } else if (tool.id === 'kimi') {
-      logoClass = 'logo-kimi'
-      logoAsset = null
-      subtitleHtml = `<a class="provider-desc-link" href="javascript:void(0)">${providerAddress}</a>`
     }
 
     // 状态徽章：只有真正处于 enabled 时才是已启用
@@ -333,8 +474,7 @@ function renderCards(tools, appMeta = {}) {
     card.className = `provider-card ${isEnabled ? 'card-active' : ''}`
     card.dataset.toolId = tool.id
 
-    // 主按钮文本：未启用显示「启用」，已启用显示「启动客户端」
-    const mainBtnText = isEnabled ? '启动客户端' : '启用'
+    const mainBtnText = '启用'
     const mainBtnClass = isEnabled ? 'btn-primary-blue btn-in-use' : 'btn-primary-blue'
 
     card.innerHTML = `
@@ -361,7 +501,7 @@ function renderCards(tools, appMeta = {}) {
       </div>
 
       <div class="card-right-section">
-        <button class="${mainBtnClass} btn-card-enable" type="button">
+        <button class="${mainBtnClass} btn-card-enable" type="button" title="${isEnabled ? '已启用，点击启动客户端' : '启用并启动客户端'}">
           <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
             <polygon points="6 4 19 12 6 20 6 4"/>
           </svg>
